@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快乐论坛 - 注册</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="register-container">
+    <div class="card register-card">
+      <div class="logo">快乐论坛</div>
+      <h1>创建账户</h1>
+      
+      <form id="register-form">
+        <div class="form-group">
+          <label for="uid">UID</label>
+          <input type="text" id="uid" class="form-control" placeholder="请输入8位UID" maxlength="8" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="name">用户名</label>
+          <input type="text" id="name" class="form-control" placeholder="请输入用户名" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">密码</label>
+          <input type="password" id="password" class="form-control" placeholder="请输入密码（至少6位）" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="avatar">选择头像</label>
+          <div class="avatar-selector" id="avatar-selector">
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">注册</button>
+        
+        <p class="text-center text-muted mt-md">
+          <a href="index.html">返回登录</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('register-form');
+      const avatarSelector = document.getElementById('avatar-selector');
+      const uidInput = document.getElementById('uid');
+      let selectedAvatar = null;
+      
+      uidInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+      });
+      
+      AVATARS.forEach((avatar, index) => {
+        const option = document.createElement('div');
+        option.className = 'avatar-option';
+        option.dataset.avatar = avatar;
+        
+        const img = document.createElement('img');
+        img.src = avatar;
+        img.alt = `头像 ${index + 1}`;
+        
+        option.appendChild(img);
+        
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedAvatar = avatar;
+        });
+        
+        if (index === 0) {
+          option.classList.add('selected');
+          selectedAvatar = avatar;
+        }
+        
+        avatarSelector.appendChild(option);
+      });
+      
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const uid = document.getElementById('uid').value;
+        const name = document.getElementById('name').value;
+        const password = document.getElementById('password').value;
+        
+        if (!selectedAvatar) {
+          showToast('请选择一个头像', 'error');
+          return;
+        }
+        
+        const result = register(uid, name, password, selectedAvatar);
+        
+        if (result.success) {
+          showToast('注册成功，即将进入论坛', 'success');
+          setTimeout(() => {
+            window.location.href = 'forum.html';
+          }, 1500);
+        } else {
+          showToast(result.message, 'error');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

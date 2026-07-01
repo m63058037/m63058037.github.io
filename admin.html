@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快乐论坛 - 管理员管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <button class="menu-btn" id="menu-btn">☰</button>
+      <div class="logo">快乐论坛</div>
+      <div></div>
+    </div>
+  </header>
+
+  <div class="overlay" id="overlay"></div>
+  
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="sidebar-close">×</button>
+    <ul class="sidebar-nav">
+      <li><a href="forum.html">论坛</a></li>
+      <li><a href="chat.html">私聊</a></li>
+      <li><a href="account.html">账户管理</a></li>
+      <li><a href="admin.html" class="active">管理员管理</a></li>
+      <li><a href="index.html" id="logout-btn">退出登录</a></li>
+    </ul>
+  </div>
+
+  <main class="container admin-container">
+    <div class="admin-section">
+      <h2>用户管理</h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>UID</th>
+            <th>用户名</th>
+            <th>状态</th>
+            <th>注册时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="users-table">
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="admin-section">
+      <h2>密码重置请求</h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>UID</th>
+            <th>用户名</th>
+            <th>状态</th>
+            <th>申请时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="requests-table">
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <div class="modal" id="mute-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>禁言用户</h2>
+        <button class="modal-close" id="mute-modal-close">×</button>
+      </div>
+      <div class="form-group">
+        <label>选择禁言时长</label>
+        <select id="mute-duration" class="form-control">
+          <option value="1min">1分钟</option>
+          <option value="5min">5分钟</option>
+          <option value="1hour">1小时</option>
+          <option value="1day">1天</option>
+          <option value="3days">3天</option>
+          <option value="1week">1星期</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="confirm-mute-btn">确认禁言</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getCurrentUser();
+      
+      if (!user || !user.isAdmin) {
+        showToast('权限不足', 'error');
+        setTimeout(() => {
+          window.location.href = 'forum.html';
+        }, 1500);
+        return;
+      }
+      
+      renderUsers();
+      renderRequests();
+      
+      const muteModal = document.getElementById('mute-modal');
+      const muteModalClose = document.getElementById('mute-modal-close');
+      const confirmMuteBtn = document.getElementById('confirm-mute-btn');
+      let currentMuteUid = null;
+      
+      muteModalClose.addEventListener('click', () => {
+        muteModal.classList.remove('open');
+      });
+      
+      muteModal.addEventListener('click', (e) => {
+        if (e.target === muteModal) {
+          muteModal.classList.remove('open');
+        }
+      });
+      
+      confirmMuteBtn.addEventListener('click', () => {
+        const duration = document.getElementById('mute-duration').value;
+        const result = muteUser(currentMuteUid, duration);
+        
+        if (result.success) {
+          showToast('禁言成功', 'success');
+          muteModal.classList.remove('open');
+          renderUsers();
+        } else {
+          showToast(result.message, 'error');
+        }
+      });
+      
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('ban-btn')) {
+          const uid = e.target.dataset.uid;
+          const result = banUser(uid);
+          
+          if (result.success) {
+            showToast('封禁成功', 'success');
+            renderUsers();
+          } else {
+            showToast(result.message, 'error');
+          }
+        }
+        
+        if (e.target.classList.contains('unban-btn')) {
+          const uid = e.target.dataset.uid;
+          const result = unbanUser(uid);
+          
+          if (result.success) {
+            showToast('解封成功', 'success');
+            renderUsers();
+          } else {
+            showToast(result.message, 'error');
+          }
+        }
+        
+        if (e.target.classList.contains('mute-btn')) {
+          currentMuteUid = e.target.dataset.uid;
+          muteModal.classList.add('open');
+        }
+        
+        if (e.target.classList.contains('unmute-btn')) {
+          const uid = e.target.dataset.uid;
+          const result = unmuteUser(uid);
+          
+          if (result.success) {
+            showToast('解除禁言成功', 'success');
+            renderUsers();
+          } else {
+            showToast(result.message, 'error');
+          }
+        }
+        
+        if (e.target.classList.contains('approve-request-btn')) {
+          const requestId = e.target.dataset.id;
+          const uid = e.target.dataset.uid;
+          
+          const result = handlePasswordRequest(requestId, 'approve');
+          
+          if (result.success) {
+            showToast('已同意密码重置申请', 'success');
+            localStorage.setItem('forum_reset_uid', uid);
+            renderRequests();
+          } else {
+            showToast(result.message, 'error');
+          }
+        }
+        
+        if (e.target.classList.contains('ignore-request-btn')) {
+          const requestId = e.target.dataset.id;
+          
+          const result = handlePasswordRequest(requestId, 'ignore');
+          
+          if (result.success) {
+            showToast('已忽略密码重置申请', 'success');
+            renderRequests();
+          } else {
+            showToast(result.message, 'error');
+          }
+        }
+      });
+    });
+    
+    function renderUsers() {
+      const users = getUsers();
+      const table = document.getElementById('users-table');
+      
+      table.innerHTML = users.map(user => {
+        let status = '<span class="status-badge active">正常</span>';
+        let actions = '';
+        
+        if (user.isAdmin) {
+          status = '<span class="status-badge active">管理员</span>';
+          actions = '<span class="text-muted">无法操作</span>';
+        } else {
+          if (user.isBanned) {
+            status = '<span class="status-badge banned">已封禁</span>';
+            actions = '<button class="btn btn-sm btn-success unban-btn" data-uid="' + user.uid + '">解封</button>';
+          } else if (isMuted(user.uid)) {
+            status = '<span class="status-badge muted">禁言中</span>';
+            actions = `
+              <button class="btn btn-sm btn-success unmute-btn" data-uid="${user.uid}">解除禁言</button>
+              <button class="btn btn-sm btn-danger ban-btn" data-uid="${user.uid}">封禁</button>
+            `;
+          } else {
+            actions = `
+              <button class="btn btn-sm btn-warning mute-btn" data-uid="${user.uid}">禁言</button>
+              <button class="btn btn-sm btn-danger ban-btn" data-uid="${user.uid}">封禁</button>
+            `;
+          }
+        }
+        
+        const createdAt = new Date(user.createdAt);
+        
+        return `
+          <tr>
+            <td>${user.uid}</td>
+            <td>${user.name}</td>
+            <td>${status}</td>
+            <td>${createdAt.toLocaleDateString('zh-CN')}</td>
+            <td>
+              <div class="action-buttons">${actions}</div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    function renderRequests() {
+      const requests = getPasswordRequests();
+      const table = document.getElementById('requests-table');
+      
+      if (requests.length === 0) {
+        table.innerHTML = '<tr><td colspan="5" class="text-center text-muted">暂无密码重置请求</td></tr>';
+        return;
+      }
+      
+      table.innerHTML = requests.map(request => {
+        const user = getUserByUid(request.uid);
+        const userName = user ? user.name : '未知用户';
+        const createdAt = new Date(request.createdAt);
+        
+        let status = '';
+        let actions = '';
+        
+        switch (request.status) {
+          case 'pending':
+            status = '<span class="status-badge pending">待处理</span>';
+            actions = `
+              <button class="btn btn-sm btn-success approve-request-btn" data-id="${request.id}" data-uid="${request.uid}">同意</button>
+              <button class="btn btn-sm btn-secondary ignore-request-btn" data-id="${request.id}">忽略</button>
+            `;
+            break;
+          case 'approved':
+            status = '<span class="status-badge approved">已同意</span>';
+            actions = '<span class="text-muted">已处理</span>';
+            break;
+          case 'ignored':
+            status = '<span class="status-badge ignored">已忽略</span>';
+            actions = '<span class="text-muted">已处理</span>';
+            break;
+        }
+        
+        return `
+          <tr>
+            <td>${request.uid}</td>
+            <td>${userName}</td>
+            <td>${status}</td>
+            <td>${createdAt.toLocaleDateString('zh-CN')}</td>
+            <td>
+              <div class="action-buttons">${actions}</div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
