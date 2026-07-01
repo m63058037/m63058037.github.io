@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快乐论坛 - 私聊</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <button class="menu-btn" id="menu-btn">☰</button>
+      <div class="logo">快乐论坛</div>
+      <div></div>
+    </div>
+  </header>
+
+  <div class="overlay" id="overlay"></div>
+  
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="sidebar-close">×</button>
+    <ul class="sidebar-nav">
+      <li><a href="forum.html">论坛</a></li>
+      <li><a href="chat.html" class="active">私聊</a></li>
+      <li><a href="account.html">账户管理</a></li>
+      <li><a href="admin.html" id="admin-link">管理员管理</a></li>
+      <li><a href="index.html" id="logout-btn">退出登录</a></li>
+    </ul>
+  </div>
+
+  <main class="container chat-container">
+    <div class="chat-layout">
+      <div class="chat-sidebar">
+        <div class="chat-search">
+          <input type="text" id="search-input" class="form-control" placeholder="搜索用户...">
+        </div>
+        
+        <div id="search-results" class="search-results"></div>
+        
+        <div class="chat-friends-list" id="friends-list">
+        </div>
+      </div>
+      
+      <div class="chat-main" id="chat-main">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">💬</div>
+          <h3>选择好友开始聊天</h3>
+          <p class="text-muted">点击左侧好友列表进入聊天</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await getCurrentUser();
+      
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      const adminLink = document.getElementById('admin-link');
+      if (!user.is_admin) {
+        adminLink.style.display = 'none';
+      }
+      
+      await renderFriends();
+      
+      const searchInput = document.getElementById('search-input');
+      const searchResults = document.getElementById('search-results');
+      
+      searchInput.addEventListener('input', async (e) => {
+        const query = e.target.value.trim();
+        
+        if (!query) {
+          searchResults.innerHTML = '';
+          await renderFriends();
+          return;
+        }
+        
+        const users = await searchUsers(query);
+        
+        if (users.length === 0) {
+          searchResults.innerHTML = '<p class="text-muted text-center">没有找到用户</p>';
+        } else {
+          searchResults.innerHTML = users.map(u => `
+            <div class="search-user">
+              <img src="${u.avatar}" alt="${u.name}" class="friend-avatar">
+              <span class="friend-name">${u.name} (${u.uid})</span>
+              <button class="btn btn-sm btn-primary add-friend-btn" data-uid="${u.uid}">添加好友</button>
+            </div>
+          `).join('');
+          
+          document.querySelectorAll('.add-friend-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const friendUid = btn.dataset.uid;
+              const result = await sendFriendRequest(friendUid);
+              
+              if (result.success) {
+                showToast('好友请求已发送', 'success');
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                await renderFriends();
+              } else {
+                showToast(result.message, 'error');
+              }
+            });
+          });
+        }
+      });
+    });
+    
+    async function renderFriends() {
+      const user = await getCurrentUser();
+      const friendsList = document.getElementById('friends-list');
+      const friends = await getFriends();
+      const requests = await getFriendRequests();
+      
+      let html = '';
+      
+      if (requests.length > 0) {
+        html += `<h4 style="padding: 8px; margin-bottom: 8px; font-size: 0.875rem; color: var(--secondary);">好友请求 (${requests.length})</h4>`;
+        html += requests.map(r => `
+          <div class="friend-item">
+            <img src="${r.requester_avatar}" alt="${r.requester_name}" class="friend-avatar">
+            <span class="friend-name">${r.requester_name}</span>
+            <div>
+              <button class="btn btn-sm btn-success accept-btn" data-id="${r.id}">接受</button>
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      if (friends.length > 0) {
+        html += `<h4 style="padding: 8px; margin-bottom: 8px; font-size: 0.875rem; color: var(--secondary);">好友 (${friends.length})</h4>`;
+        html += friends.map(f => `
+          <div class="friend-item" data-uid="${f.uid}">
+            <img src="${f.avatar}" alt="${f.name}" class="friend-avatar">
+            <span class="friend-name">${f.name}</span>
+            <span class="friend-status online"></span>
+            <button class="btn btn-sm btn-danger delete-friend-btn" data-uid="${f.uid}">删除</button>
+          </div>
+        `).join('');
+      } else {
+        html += '<p class="text-muted text-center">暂无好友，搜索用户添加好友吧</p>';
+      }
+      
+      friendsList.innerHTML = html;
+      
+      document.querySelectorAll('.accept-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const result = await acceptFriendRequest(btn.dataset.id);
+          if (result.success) {
+            showToast('已接受好友请求', 'success');
+            await renderFriends();
+          }
+        });
+      });
+      
+      document.querySelectorAll('.delete-friend-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const friendUid = btn.dataset.uid;
+          if (confirm('确定要删除这位好友吗？')) {
+            const result = await deleteFriend(friendUid);
+            if (result.success) {
+              showToast('好友已删除', 'success');
+              await renderFriends();
+            } else {
+              showToast(result.message, 'error');
+            }
+          }
+        });
+      });
+      
+      document.querySelectorAll('.friend-item[data-uid]').forEach(item => {
+        item.addEventListener('click', () => {
+          const friendUid = item.dataset.uid;
+          window.location.href = `chat-room.html?uid=${friendUid}`;
+        });
+      });
+    }
+  </script>
+</body>
+</html>
