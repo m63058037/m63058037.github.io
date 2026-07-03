@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快乐论坛 - 登录</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="card login-card">
+      <div class="logo">快乐论坛</div>
+      <h1>欢迎回来</h1>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="uid">UID</label>
+          <input type="text" id="uid" class="form-control" placeholder="请输入8位UID" maxlength="8" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">密码</label>
+          <input type="password" id="password" class="form-control" placeholder="请输入密码" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">登录</button>
+        
+        <div class="login-actions">
+          <a href="forgot-password.html">忘记密码？</a>
+          <a href="register.html">注册账户</a>
+        </div>
+      </form>
+      
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('login-form');
+      const uidInput = document.getElementById('uid');
+
+      uidInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const uid = document.getElementById('uid').value;
+        const password = document.getElementById('password').value;
+
+        if (!/^\d{8}$/.test(uid)) {
+          showToast('UID必须是8位数字', 'error');
+          return;
+        }
+
+        try {
+          console.log('Starting login with uid:', uid);
+          const result = await login(uid, password);
+          console.log('Login result:', result);
+
+          if (result.success) {
+            localStorage.setItem('forum_user', JSON.stringify(result.data));
+            localStorage.setItem('forum_session_id', result.data.sessionId);
+            showToast('登录成功', 'success');
+            setTimeout(() => {
+              window.location.replace('forum.html');
+            }, 500);
+          } else {
+            showToast(result.message || '登录失败', 'error');
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          showToast('登录出错: ' + error.message, 'error');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
