@@ -8,13 +8,19 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy development folder to root
+      - name: Copy development folder contents to root
         run: |
-          cp -r 开发文件夹/. .
+          mkdir -p /tmp/deploy
+          cp -r 开发文件夹/. /tmp/deploy/
+          rm -rf ./*
+          cp -r /tmp/deploy/. .
+          ls -la
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -22,3 +28,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
