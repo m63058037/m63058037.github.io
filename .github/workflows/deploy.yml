@@ -14,19 +14,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy development folder contents to root
+      - name: Create deploy branch
         run: |
-          mkdir -p /tmp/deploy
-          cp -r 开发文件夹/. /tmp/deploy/
-          rm -rf ./*
-          cp -r /tmp/deploy/. .
-          ls -la
+          git checkout --orphan gh-pages
+          git rm -rf .
+          cp -r 开发文件夹/. .
+          git add -A
+          git commit -m "Deploy $(date +%Y%m%d%H%M%S)"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
+          keep_files: false
