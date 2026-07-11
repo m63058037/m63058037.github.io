@@ -7,7 +7,6 @@ import { RightSidebarComponent } from '../components/right-sidebar.js';
 class HomePage {
   constructor() {
     this.currentUser = null;
-    this.currentCategoryId = null;
     
     this.header = null;
     this.feed = null;
@@ -51,7 +50,6 @@ class HomePage {
   async initComponents() {
     this.header = new HeaderComponent({
       onMenuClick: () => this.sidebar.open(),
-      onCategoryChange: (categoryId) => this.handleCategoryChange(categoryId),
       onSearch: (keyword) => this.handleSearch(keyword)
     });
     
@@ -59,17 +57,9 @@ class HomePage {
       pageSize: 10
     });
     
-    this.sidebar = new SidebarComponent({
-      onCategoryChange: (categoryId) => this.handleCategoryChange(categoryId)
-    });
+    this.sidebar = new SidebarComponent();
     
     this.rightSidebar = new RightSidebarComponent();
-  }
-  
-  handleCategoryChange(categoryId) {
-    this.currentCategoryId = categoryId;
-    this.header.setActiveCategory(categoryId);
-    this.feed.loadPosts(1, categoryId);
   }
   
   handleSearch(keyword) {
@@ -78,6 +68,44 @@ class HomePage {
   
   bindEvents() {
     this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    this.initScrollBehavior();
+  }
+  
+  initScrollBehavior() {
+    const header = document.querySelector('.home-header');
+    const mainContent = document.querySelector('.home-page main');
+    
+    const setHeaderHeight = () => {
+      const headerHeight = header.offsetHeight;
+      mainContent.style.paddingTop = headerHeight + 'px';
+    };
+    
+    setHeaderHeight();
+    window.addEventListener('resize', setHeaderHeight);
+    
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+    
+    const updateHeader = () => {
+      const currentScrollY = window.scrollY;
+      const scrollDelta = currentScrollY - lastScrollY;
+      
+      if (scrollDelta > 10 && currentScrollY > 100) {
+        header.classList.add('hidden');
+      } else if (scrollDelta < -10) {
+        header.classList.remove('hidden');
+      }
+      
+      lastScrollY = currentScrollY;
+      ticking = false;
+    };
+    
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(updateHeader);
+        ticking = true;
+      }
+    }, { passive: true });
   }
   
   showSnackbar(message) {

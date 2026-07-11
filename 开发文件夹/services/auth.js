@@ -104,6 +104,7 @@ export const authService = {
   async register(uid, password, nickname = '') {
     try {
       const email = this._generateVirtualEmail(uid);
+      const avatar = `${config.defaultAvatar}${generateUUID()}`;
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -115,7 +116,7 @@ export const authService = {
             is_admin: false,
             is_moderator: false,
             is_vip: false,
-            avatar: `${config.defaultAvatar}${generateUUID()}`,
+            avatar: avatar,
             uid: uid
           }
         }
@@ -131,6 +132,12 @@ export const authService = {
       if (!user) {
         return createResponse(false, null, '注册失败', 400);
       }
+
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        nickname: nickname || uid,
+        avatar: avatar
+      });
       
       return createResponse(true, { user }, '注册成功', 201);
     } catch (error) {
@@ -179,12 +186,25 @@ export const authService = {
       const uid = user.user_metadata?.uid || '';
       const isAdminUid = ADMIN_UIDS.includes(uid);
       
+      let profileData = null;
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('bio, signature')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profileError && profile) {
+        profileData = profile;
+      }
+      
       const userInfo = {
         id: user.id,
         uid: uid,
         role: isAdminUid ? UserRoles.SUPER_ADMIN : (user.user_metadata?.role || UserRoles.USER),
         nickname: user.user_metadata?.nickname || '',
         avatar: user.user_metadata?.avatar || '',
+        bio: profileData?.bio || '',
+        signature: profileData?.signature || '',
         is_admin: isAdminUid || user.user_metadata?.is_admin || false,
         is_moderator: isAdminUid || user.user_metadata?.is_moderator || false,
         is_vip: isAdminUid || user.user_metadata?.is_vip || false,
@@ -388,6 +408,12 @@ export const authService = {
    */
   async updateUserMetadata(metadata) {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return createResponse(false, null, '未登录', 401);
+      }
+      
       const { data, error } = await supabase.auth.updateUser({
         data: metadata
       });
@@ -395,6 +421,32 @@ export const authService = {
       if (error) {
         console.error('Auth updateUserMetadata error:', error);
         return createResponse(false, null, error.message, error.status || 400);
+      }
+      
+      const profileUpdates = {};
+      if (metadata.nickname !== undefined) {
+        profileUpdates.nickname = metadata.nickname;
+      }
+      if (metadata.bio !== undefined) {
+        profileUpdates.bio = metadata.bio;
+      }
+      if (metadata.signature !== undefined) {
+        profileUpdates.signature = metadata.signature;
+      }
+      if (metadata.avatar !== undefined) {
+        profileUpdates.avatar = metadata.avatar;
+      }
+      
+      if (Object.keys(profileUpdates).length > 0) {
+        const { error: upsertError } = await supabase.from('profiles').upsert({
+          id: user.id,
+          ...profileUpdates
+        });
+        
+        if (upsertError) {
+          console.error('Auth updateUserMetadata upsert error:', upsertError);
+          return createResponse(false, null, upsertError.message, 500);
+        }
       }
       
       return createResponse(true, data, '用户信息更新成功', 200);
@@ -435,6 +487,50 @@ export const authService = {
     } catch (error) {
       console.error('Auth getSession error:', error);
       return null;
+    }
+  },
+
+  /**
+   * 根据用户ID获取用户公开信息（从profiles表）
+   * @param {string} userId - 用户ID
+   * @returns {Promise<object>} 用户信息
+   */
+  async getUserInfo(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nickname, avatar')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.id === userId) {
+          return {
+            id: user.id,
+            nickname: user.user_metadata?.nickname || userId.substring(0, 8),
+            avatar: user.user_metadata?.avatar || null
+          };
+        }
+        return {
+          id: userId,
+          nickname: userId.substring(0, 8),
+          avatar: null
+        };
+      }
+
+      return {
+        id: data.id,
+        nickname: data.nickname || userId.substring(0, 8),
+        avatar: data.avatar || null
+      };
+    } catch (error) {
+      console.error('Auth getUserInfo error:', error);
+      return {
+        id: userId,
+        nickname: userId.substring(0, 8),
+        avatar: null
+      };
     }
   }
 };

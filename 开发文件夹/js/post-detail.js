@@ -1,10 +1,13 @@
 import { authService } from '../services/auth.js';
 import { postService } from '../services/post.js';
+import { likeService } from '../services/like.js';
+import { commentService } from '../services/comment.js';
 
 class PostDetailPage {
   constructor() {
     this.postId = this.getPostId();
     this.currentUser = null;
+    this.isLiked = false;
 
     this.postDetailLoading = document.getElementById('postDetailLoading');
     this.postDetailCard = document.getElementById('postDetailCard');
@@ -21,6 +24,9 @@ class PostDetailPage {
     this.detailViews = document.getElementById('detailViews');
     this.detailLikes = document.getElementById('detailLikes');
     this.detailFavorites = document.getElementById('detailFavorites');
+    this.detailComments = document.getElementById('detailComments');
+
+    this.likeBtn = document.getElementById('detailLikeBtn');
 
     this.editBtn = document.getElementById('editBtn');
     this.deleteBtn = document.getElementById('deleteBtn');
@@ -49,6 +55,7 @@ class PostDetailPage {
       await this.checkSession();
       await this.getCurrentUser();
       await this.loadPost();
+      await this.loadLikes();
       await this.loadComments();
       this.bindEvents();
     } catch (error) {
@@ -87,6 +94,12 @@ class PostDetailPage {
 
     const post = response.data;
 
+    console.log('[DEBUG post-detail] Post Data:', post);
+    console.log('[DEBUG post-detail] Post Images:', post.images);
+    console.log('[DEBUG post-detail] Post Images Type:', typeof post.images);
+    console.log('[DEBUG post-detail] Post Images is Array:', Array.isArray(post.images));
+    console.log('[DEBUG post-detail] Post Images Length:', post.images?.length || 0);
+
     this.postDetailLoading.style.display = 'none';
     this.postDetailCard.style.display = 'block';
 
@@ -99,6 +112,7 @@ class PostDetailPage {
     this.detailViews.textContent = post.views_count;
     this.detailLikes.textContent = post.likes_count;
     this.detailFavorites.textContent = post.favorites_count;
+    this.detailComments.textContent = post.comments_count;
 
     if (post.is_pinned) {
       const badge = document.createElement('span');
@@ -122,6 +136,10 @@ class PostDetailPage {
       });
     }
 
+    if (post.images && post.images.length > 0) {
+      this.renderImages(post.images);
+    }
+
     if (this.currentUser && this.currentUser.id === post.user_id) {
       this.editBtn.style.display = 'flex';
       this.deleteBtn.style.display = 'flex';
@@ -130,8 +148,96 @@ class PostDetailPage {
     postService.incrementViews(this.postId);
   }
 
+  renderImages(images) {
+    console.log('[DEBUG post-detail] Entering renderImages');
+    console.log('[DEBUG post-detail] images parameter:', images);
+    console.log('[DEBUG post-detail] detailImages element:', this.detailImages);
+    console.log('[DEBUG post-detail] detailImages exists:', !!this.detailImages);
+    
+    if (!this.detailImages) {
+      console.error('[DEBUG post-detail] detailImages element is null!');
+      return;
+    }
+    
+    this.detailImages.innerHTML = '';
+    console.log('[DEBUG post-detail] images length:', images.length);
+    
+    images.forEach((image, index) => {
+      console.log(`[DEBUG post-detail] Image ${index}:`, image);
+      console.log(`[DEBUG post-detail] Image ${index} image_url:`, image.image_url);
+      
+      const renderUrl = image.image_url;
+      console.log('[DEBUG post-detail] render image url:', renderUrl);
+      console.log('[DEBUG post-detail] render image url type:', typeof renderUrl);
+      console.log('[DEBUG post-detail] render image url starts with http:', renderUrl?.startsWith('http'));
+      console.log('[DEBUG post-detail] render image url length:', renderUrl?.length);
+      
+      if (renderUrl) {
+        const img = document.createElement('img');
+        img.src = renderUrl;
+        img.className = 'detail-image';
+        console.log('[DEBUG post-detail] img.src final value:', img.src);
+        console.log(`[DEBUG post-detail] Created img element:`, img);
+        
+        img.onload = () => {
+          console.log('[DEBUG post-detail] Image loaded successfully:', renderUrl);
+        };
+        
+        img.onerror = (e) => {
+          console.error('[DEBUG post-detail] Image load failed:', renderUrl);
+          console.error('[DEBUG post-detail] Error event:', e);
+        };
+        
+        this.detailImages.appendChild(img);
+      } else {
+        console.error('[DEBUG post-detail] Image URL is empty or null:', image);
+      }
+    });
+    
+    console.log('[DEBUG post-detail] renderImages completed');
+  }
+
+  async loadLikes() {
+    const response = await likeService.isLiked(this.postId);
+    if (response.success) {
+      this.isLiked = response.data;
+      this.updateLikeButton();
+    }
+  }
+
   async loadComments() {
-    this.commentsList.innerHTML = '<p class="no-data">暂无评论</p>';
+    const response = await commentService.getComments(this.postId);
+    if (response.success) {
+      this.renderComments(response.data.comments);
+    }
+  }
+
+  renderComments(comments) {
+    this.commentsList.innerHTML = '';
+    if (comments.length === 0) {
+      this.commentsList.innerHTML = '<p class="no-data">暂无评论</p>';
+      return;
+    }
+
+    comments.forEach(comment => {
+      const commentCard = document.createElement('div');
+      commentCard.className = 'comment-card';
+
+      const avatarUrl = comment.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user?.id || comment.user_id}`;
+
+      commentCard.innerHTML = `
+        <div class="comment-header">
+          <img src="${avatarUrl}" class="comment-avatar" alt="${comment.user?.nickname || '用户'}">
+          <div class="comment-author-info">
+            <span class="comment-author">${comment.user?.nickname || '用户'}</span>
+            <span class="comment-time">${this.formatTime(comment.created_at)}</span>
+          </div>
+        </div>
+        <div class="comment-content">${comment.content}</div>
+      `;
+
+      this.commentsList.appendChild(commentCard);
+    });
   }
 
   formatTime(timestamp) {
@@ -144,6 +250,59 @@ class PostDetailPage {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
     if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
     return `${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+
+  async handleLike() {
+    const response = await likeService.toggleLike(this.postId);
+    if (response.success) {
+      this.isLiked = response.data.liked;
+      this.updateLikeButton();
+      this.updateLikeCount();
+    } else {
+      this.showSnackbar(response.message);
+    }
+  }
+
+  updateLikeButton() {
+    if (this.likeBtn) {
+      if (this.isLiked) {
+        this.likeBtn.classList.add('liked');
+      } else {
+        this.likeBtn.classList.remove('liked');
+      }
+    }
+  }
+
+  async updateLikeCount() {
+    const response = await likeService.getLikeCount(this.postId);
+    if (response.success) {
+      this.detailLikes.textContent = response.data;
+    }
+  }
+
+  async handleCommentSubmit() {
+    const content = this.commentInput.value.trim();
+    if (!content) {
+      this.showSnackbar('请输入评论内容');
+      return;
+    }
+
+    const response = await commentService.createComment(this.postId, content);
+    if (response.success) {
+      this.commentInput.value = '';
+      await this.loadComments();
+      await this.updateCommentCount();
+      this.showSnackbar('评论发表成功');
+    } else {
+      this.showSnackbar(response.message);
+    }
+  }
+
+  async updateCommentCount() {
+    const response = await commentService.getCommentCount(this.postId);
+    if (response.success) {
+      this.detailComments.textContent = response.data;
+    }
   }
 
   async handleDelete() {
@@ -170,7 +329,23 @@ class PostDetailPage {
     this.deleteBtn.addEventListener('click', () => this.handleDelete());
     this.reportBtn.addEventListener('click', () => this.showSnackbar('举报功能开发中'));
     this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
-    this.commentSubmitBtn.addEventListener('click', () => this.showSnackbar('评论功能开发中'));
+    
+    if (this.likeBtn) {
+      this.likeBtn.addEventListener('click', () => this.handleLike());
+    }
+    
+    if (this.commentSubmitBtn) {
+      this.commentSubmitBtn.addEventListener('click', () => this.handleCommentSubmit());
+    }
+    
+    if (this.commentInput) {
+      this.commentInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.handleCommentSubmit();
+        }
+      });
+    }
   }
 
   showSnackbar(message) {

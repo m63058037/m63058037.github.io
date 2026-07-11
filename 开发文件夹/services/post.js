@@ -13,7 +13,7 @@ function createResponse(success, data = null, message = '', statusCode = 200) {
 }
 
 export const postService = {
-  async getPosts(page = 1, pageSize = 10, categoryId = null) {
+  async getPosts(page = 1, pageSize = 10) {
     try {
       const options = {
         select: '*',
@@ -23,10 +23,6 @@ export const postService = {
           { column: 'created_at', ascending: false }
         ]
       };
-
-      if (categoryId) {
-        options.filter.category_id = categoryId;
-      }
 
       const response = await apiService.paginate('posts', page, pageSize, options);
       
@@ -38,8 +34,9 @@ export const postService = {
       const pagination = response.data.pagination;
 
       const postsWithUser = await this._attachUserInfo(posts);
+      const postsWithImages = await this._attachPostImages(postsWithUser);
 
-      return createResponse(true, { posts: postsWithUser, pagination }, '', 200);
+      return createResponse(true, { posts: postsWithImages, pagination }, '', 200);
     } catch (error) {
       console.error('PostService getPosts error:', error);
       return createResponse(false, null, error.message, 500);
@@ -63,29 +60,31 @@ export const postService = {
       }
 
       const postWithUser = await this._attachUserInfo([post]);
+      const postWithImages = await this._attachPostImages(postWithUser);
 
-      return createResponse(true, postWithUser[0], '', 200);
+      return createResponse(true, postWithImages[0], '', 200);
     } catch (error) {
       console.error('PostService getPostById error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
 
-  async createPost(title, content, categoryId = null, tags = []) {
+  async createPost(title, content, tags = []) {
+    let userId = null;
     try {
       const userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
         return createResponse(false, null, userResponse.message, userResponse.statusCode);
       }
 
-      const userId = userResponse.data.id;
+      userId = userResponse.data.id;
+      const safeTags = tags || [];
 
       const postData = {
         user_id: userId,
         title: title.trim(),
         content: content.trim(),
-        category_id: categoryId,
-        tags: tags.length > 0 ? tags : null,
+        tags: safeTags.length > 0 ? safeTags : [],
         excerpt: content.trim().substring(0, 300),
         is_pinned: false,
         is_hot: false,
@@ -112,13 +111,12 @@ export const postService = {
     } catch (error) {
       console.error('PostService createPost error:', error);
       loggerService.logError(error, { operation: 'create_post', table: 'posts' });
-      const userId = userResponse.data?.id;
       await loggerService.logPost(userId, null, 'create', 'failed', { title, error: error.message });
       return createResponse(false, null, error.message, 500);
     }
   },
 
-  async updatePost(postId, title, content, categoryId = null, tags = []) {
+  async updatePost(postId, title, content, tags = []) {
     try {
       const userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
@@ -139,8 +137,7 @@ export const postService = {
       const updateData = {
         title: title.trim(),
         content: content.trim(),
-        category_id: categoryId,
-        tags: tags.length > 0 ? tags : null,
+        tags: tags.length > 0 ? tags : [],
         excerpt: content.trim().substring(0, 300)
       };
 
@@ -281,13 +278,9 @@ export const postService = {
 
       for (const userId of userIds) {
         try {
-          const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
-          if (!error && user) {
-            users[userId] = {
-              id: user.id,
-              nickname: user.user_metadata?.nickname || userId.substring(0, 8),
-              avatar: user.user_metadata?.avatar || null
-            };
+          const userInfo = await authService.getUserInfo(userId);
+          if (userInfo) {
+            users[userId] = userInfo;
           }
         } catch (e) {
           console.warn('Failed to fetch user info for:', userId);
@@ -303,6 +296,45 @@ export const postService = {
       return posts.map(post => ({
         ...post,
         user: { id: post.user_id, nickname: '用户', avatar: null }
+      }));
+    }
+  },
+
+  async _attachPostImages(posts) {
+    try {
+      if (!posts || posts.length === 0) {
+        return [];
+      }
+
+      const postIds = [...new Set(posts.map(post => post.id))];
+      const postImagesMap = {};
+
+      for (const postId of postIds) {
+        try {
+          const response = await this.getPostImages(postId);
+          if (response.success && response.data.length > 0) {
+            postImagesMap[postId] = response.data.map(img => ({
+              id: img.id,
+              image_url: img.url ? img.url.trim().replace(/^`|`$/g, '') : '',
+              path: img.path,
+              file_name: img.file_name,
+              sort_order: img.sort_order
+            }));
+          }
+        } catch (e) {
+          console.warn('Failed to fetch images for post:', postId);
+        }
+      }
+
+      return posts.map(post => ({
+        ...post,
+        images: postImagesMap[post.id] || []
+      }));
+    } catch (error) {
+      console.error('PostService _attachPostImages error:', error);
+      return posts.map(post => ({
+        ...post,
+        images: []
       }));
     }
   }

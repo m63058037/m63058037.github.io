@@ -4,7 +4,6 @@ export class FeedComponent {
   constructor(options = {}) {
     this.pageSize = options.pageSize || 10;
     this.currentPage = 1;
-    this.currentCategoryId = null;
     this.posts = [];
     
     this.postsLoading = document.getElementById('postsLoading');
@@ -19,16 +18,15 @@ export class FeedComponent {
     await this.loadPosts();
   }
   
-  async loadPosts(page = 1, categoryId = null) {
+  async loadPosts(page = 1) {
     this.currentPage = page;
-    this.currentCategoryId = categoryId;
     
     this.showLoading(true);
     this.noPosts.style.display = 'none';
     this.postsList.innerHTML = '';
     
     try {
-      const response = await postService.getPosts(this.currentPage, this.pageSize, this.currentCategoryId);
+      const response = await postService.getPosts(this.currentPage, this.pageSize);
       
       if (!response.success) {
         console.warn('Failed to load posts:', response.message);
@@ -206,7 +204,7 @@ export class FeedComponent {
       btn.addEventListener('click', () => {
         const page = parseInt(btn.dataset.page);
         if (page && page !== this.currentPage && !btn.classList.contains('disabled')) {
-          this.loadPosts(page, this.currentCategoryId);
+          this.loadPosts(page);
         }
       });
     });
@@ -227,7 +225,7 @@ export class FeedComponent {
   }
   
   refresh() {
-    this.loadPosts(1, this.currentCategoryId);
+    this.loadPosts(1);
   }
 }
 

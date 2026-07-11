@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/styles.css?v=2026071105">
 </head>
 <body class="home-page">
   <header class="home-header">
@@ -29,7 +29,7 @@
               </linearGradient>
             </defs>
           </svg>
-          <span class="site-title">校园论坛</span>
+          <span class="site-title">校园论坛 <span class="version-badge">Preview 2.0</span></span>
         </a>
       </div>
 
@@ -50,12 +50,6 @@
       </div>
 
       <div class="header-right">
-        <a href="post.html" class="post-button" id="postButton">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-          </svg>
-          <span>发帖</span>
-        </a>
         <button class="user-menu-button" id="userMenuButton" aria-label="用户菜单">
           <img id="userAvatar" src="" alt="用户头像" class="user-avatar" />
           <span class="user-nickname" id="userNickname"></span>
@@ -160,6 +154,14 @@
 
     <main class="main-content">
       <div class="posts-container" id="postsContainer">
+        <div class="create-post-card">
+          <a href="post.html" class="create-post-button">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+            <span>发布帖子</span>
+          </a>
+        </div>
         <div class="posts-loading" id="postsLoading">
           <svg class="loading-spinner" viewBox="25 25 50 50">
             <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100"/>
@@ -231,6 +233,6 @@
   </div>
 
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/home.js"></script>
+  <script type="module" src="../js/home.js?v=2026071105"></script>
 </body>
 </html>

@@ -4,7 +4,6 @@ import { storageService } from '../services/storage.js';
 
 class PostPage {
   constructor() {
-    this.titleInput = document.getElementById('title');
     this.contentInput = document.getElementById('content');
     this.tagsInput = document.getElementById('tags');
     this.submitButton = document.getElementById('submitButton');
@@ -13,10 +12,8 @@ class PostPage {
     this.imageFileInput = document.getElementById('imageFileInput');
     this.imagePreviewGrid = document.getElementById('imagePreviewGrid');
 
-    this.titleCounter = document.getElementById('titleCounter');
     this.contentCounter = document.getElementById('contentCounter');
 
-    this.titleError = document.getElementById('titleError');
     this.contentError = document.getElementById('contentError');
     this.imageError = document.getElementById('imageError');
 
@@ -46,11 +43,6 @@ class PostPage {
     this.submitButton.addEventListener('click', () => this.handleSubmit());
     this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
 
-    this.titleInput.addEventListener('input', () => {
-      this.titleCounter.textContent = `${this.titleInput.value.length}/200`;
-      this.validateTitle();
-    });
-
     this.contentInput.addEventListener('input', () => {
       this.contentCounter.textContent = this.contentInput.value.length;
       this.validateContent();
@@ -60,39 +52,25 @@ class PostPage {
     this.imageFileInput.addEventListener('change', (e) => this.handleImageUpload(e));
   }
 
-  validateTitle() {
-    const title = this.titleInput.value.trim();
-    if (!title) {
-      this.titleError.textContent = '请输入标题';
-      return false;
-    }
-    if (title.length < 2) {
-      this.titleError.textContent = '标题至少需要2个字符';
-      return false;
-    }
-    this.titleError.textContent = '';
-    return true;
-  }
-
   validateContent() {
-    const content = this.contentInput.value.trim();
-    if (!content) {
-      this.contentError.textContent = '请输入内容';
-      return false;
-    }
-    if (content.length < 10) {
-      this.contentError.textContent = '内容至少需要10个字符';
-      return false;
-    }
     this.contentError.textContent = '';
     return true;
   }
 
-  async handleSubmit() {
-    const isTitleValid = this.validateTitle();
-    const isContentValid = this.validateContent();
+  _generateTitle(content) {
+    const trimmed = content.trim();
+    if (!trimmed) {
+      return '分享图片';
+    }
+    return trimmed.length > 50 ? trimmed.substring(0, 50) + '...' : trimmed;
+  }
 
-    if (!isTitleValid || !isContentValid) {
+  async handleSubmit() {
+    const content = this.contentInput.value.trim();
+    const hasImages = this.uploadedImages.length > 0;
+
+    if (!content && !hasImages) {
+      this.contentError.textContent = '请输入内容或上传图片';
       return;
     }
 
@@ -100,11 +78,16 @@ class PostPage {
 
     try {
       const tags = this.tagsInput.value.trim().split(/[,，]/).map(t => t.trim()).filter(Boolean);
+      
+      console.log('[DEBUG] Post submit start');
+      console.log('[DEBUG] uploadedImages length:', this.uploadedImages.length);
+      console.log('[DEBUG] uploadedImages:', this.uploadedImages);
+
+      const title = this._generateTitle(content);
 
       const createResponse = await postService.createPost(
-        this.titleInput.value,
+        title,
         this.contentInput.value,
-        null,
         tags
       );
 
@@ -114,11 +97,17 @@ class PostPage {
       }
 
       const postId = createResponse.data.id;
+      console.log('[DEBUG] Post created successfully, postId:', postId);
 
       if (this.uploadedImages.length > 0) {
+        console.log('[DEBUG] Entering image upload section');
+        
         const files = this.uploadedImages.map(img => img.file);
+        console.log('[DEBUG] Extracted files:', files);
+        console.log('[DEBUG] Files length:', files.length);
         
         const uploadResponse = await storageService.uploadPostImages(files, postId);
+        console.log('[DEBUG] uploadResponse:', uploadResponse);
         
         if (!uploadResponse.success) {
           this.showSnackbar(`帖子已创建，但图片上传失败：${uploadResponse.message}`);
@@ -129,6 +118,7 @@ class PostPage {
         }
 
         const saveImagesResponse = await postService.savePostImages(postId, uploadResponse.data);
+        console.log('[DEBUG] saveImagesResponse:', saveImagesResponse);
         
         if (!saveImagesResponse.success) {
           this.showSnackbar(`帖子已创建，但图片关联合保存失败：${saveImagesResponse.message}`);
@@ -137,6 +127,8 @@ class PostPage {
           }, 2000);
           return;
         }
+      } else {
+        console.log('[DEBUG] No images to upload');
       }
 
       this.showSnackbar('帖子发布成功');
@@ -144,7 +136,7 @@ class PostPage {
         window.location.href = `post-detail.html?id=${postId}`;
       }, 1500);
     } catch (error) {
-      console.error('Submit post error:', error);
+      console.error('[ERROR] Submit post error:', error);
       this.showSnackbar('发布失败，请稍后重试');
     } finally {
       this.setLoading(false);
@@ -153,7 +145,10 @@ class PostPage {
 
   handleImageUpload(e) {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      console.log('[DEBUG] No files selected');
+      return;
+    }
 
     const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
     const MAX_SIZE = 10 * 1024 * 1024;
@@ -163,21 +158,25 @@ class PostPage {
       return;
     }
 
-    Array.from(files).forEach(file => {
+    console.log('[DEBUG] handleImageUpload called, files count:', files.length);
+
+    for (const file of Array.from(files)) {
+      console.log('[DEBUG] Processing file:', file.name, file.type, file.size);
+
       if (!file.type.startsWith('image/')) {
         this.showSnackbar('请上传图片文件');
-        return;
+        continue;
       }
 
       const fileExt = file.name.split('.').pop().toLowerCase();
       if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
         this.showSnackbar('不支持的图片格式，仅支持 jpg/jpeg/png/webp');
-        return;
+        continue;
       }
 
       if (file.size > MAX_SIZE) {
         this.showSnackbar('单张图片大小不能超过10MB');
-        return;
+        continue;
       }
 
       const reader = new FileReader();
@@ -188,10 +187,15 @@ class PostPage {
           id: Date.now() + Math.random()
         };
         this.uploadedImages.push(imageData);
+        console.log('[DEBUG] Image added to uploadedImages, current length:', this.uploadedImages.length);
         this.renderImagePreview();
       };
+      reader.onerror = (error) => {
+        console.error('[ERROR] FileReader error:', error);
+        this.showSnackbar('图片读取失败');
+      };
       reader.readAsDataURL(file);
-    });
+    }
 
     this.imageFileInput.value = '';
   }

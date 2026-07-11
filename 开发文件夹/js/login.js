@@ -12,16 +12,18 @@ class LoginPage {
     this.snackbarAction = document.getElementById('snackbarAction');
     this.uidError = document.getElementById('uidError');
     this.passwordError = document.getElementById('passwordError');
+    this.signupLink = document.querySelector('.signup-link .link-primary');
 
     this.init();
   }
 
   async init() {
+    this.bindEvents();
+    
     try {
       await this.checkSession();
       await this.getCurrentUser();
       this.renderPage();
-      this.bindEvents();
     } catch (error) {
       console.error('Login init error:', error);
     }
@@ -59,6 +61,10 @@ class LoginPage {
     this.passwordToggle.addEventListener('click', () => this.togglePassword());
     
     this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+
+    if (this.signupLink) {
+      this.signupLink.addEventListener('click', () => this.handleSignupClick());
+    }
 
     this.uidInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -181,6 +187,10 @@ class LoginPage {
 
   redirectToHome() {
     window.location.href = 'home.html';
+  }
+
+  handleSignupClick() {
+    window.location.href = 'register.html';
   }
 }
 

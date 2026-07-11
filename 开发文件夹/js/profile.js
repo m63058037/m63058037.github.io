@@ -97,7 +97,7 @@ class ProfilePage {
 
   bindEvents() {
     this.profileForm.addEventListener('submit', (e) => this.handleSubmit(e));
-    this.cancelBtn.addEventListener('click', () => this.resetForm());
+    this.cancelBtn.addEventListener('click', () => this.handleCancel());
     this.logoutBtn.addEventListener('click', () => this.handleLogout());
     
     this.nicknameInput.addEventListener('input', () => this.validateNickname());
@@ -227,6 +227,20 @@ class ProfilePage {
     return this.nicknameInput.value.trim() !== this.originalData.nickname ||
            this.bioInput.value.trim() !== this.originalData.bio ||
            this.signatureInput.value.trim() !== this.originalData.signature;
+  }
+
+  handleCancel() {
+    if (this.hasChanges()) {
+      if (!confirm('您有未保存的修改，确定要离开吗？')) {
+        return;
+      }
+    }
+    
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = 'home.html';
+    }
   }
 
   resetForm() {
