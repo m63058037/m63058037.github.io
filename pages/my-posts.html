@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园论坛 - 我的帖子</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="my-posts-page">
+  <header class="simple-header">
+    <button class="back-button" id="backButton">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+      </svg>
+      <span>返回</span>
+    </button>
+    <h1 class="page-title">我的帖子</h1>
+    <div class="header-actions"></div>
+  </header>
+
+  <main class="my-posts-content">
+    <div class="tabs">
+      <button class="tab active" data-tab="all">全部</button>
+      <button class="tab" data-tab="published">已发布</button>
+      <button class="tab" data-tab="draft">草稿</button>
+    </div>
+
+    <div class="posts-container" id="myPostsContainer">
+      <div class="posts-loading" id="postsLoading">
+        <svg class="loading-spinner" viewBox="25 25 50 50">
+          <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100"/>
+        </svg>
+        <span>加载中...</span>
+      </div>
+      <div class="posts-list" id="postsList"></div>
+      <div class="no-posts" id="noPosts" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <p>暂无帖子</p>
+        <a href="post.html" class="btn-primary">去发帖</a>
+      </div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </main>
+
+  <div class="snackbar-container" id="snackbarContainer">
+    <div class="md3-snackbar" id="snackbar">
+      <div class="md3-snackbar-surface">
+        <div class="md3-snackbar-row">
+          <svg class="md3-snackbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="md3-snackbar-label" id="snackbarLabel"></span>
+        </div>
+        <button class="md3-snackbar-action" id="snackbarAction" type="button">
+          <span class="md3-snackbar-action-label">关闭</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/my-posts.js"></script>
+</body>
+</html>

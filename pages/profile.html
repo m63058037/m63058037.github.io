@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园论坛 - 个人资料</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=2026071106">
+</head>
+<body class="profile-page">
+  <div class="profile-container">
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="profile-avatar-section">
+          <div class="avatar-wrapper" id="avatarWrapper">
+            <img id="avatarImg" src="" alt="用户头像" class="profile-avatar" />
+            <button type="button" class="avatar-upload-btn" id="avatarUploadBtn" aria-label="上传头像">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </button>
+            <input type="file" id="avatarFileInput" accept="image/*" class="avatar-file-input">
+          </div>
+          <div class="avatar-upload-status" id="avatarUploadStatus"></div>
+        </div>
+        <div class="profile-info">
+          <h1 class="profile-nickname" id="profileNickname">加载中...</h1>
+          <p class="profile-email" id="profileEmail"></p>
+        </div>
+      </div>
+
+      <form class="profile-form" id="profileForm" novalidate>
+        <div class="form-section">
+          <h2 class="section-title">基本信息</h2>
+          
+          <div class="form-field">
+            <label class="form-label" for="nickname">昵称</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <input 
+                type="text" 
+                id="nickname" 
+                class="form-input" 
+                placeholder="请输入昵称" 
+                maxlength="50"
+              />
+            </div>
+            <span class="form-error" id="nicknameError"></span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2 class="section-title">个人简介</h2>
+          
+          <div class="form-field">
+            <label class="form-label" for="bio">个人简介</label>
+            <div class="input-wrapper">
+              <textarea 
+                id="bio" 
+                class="form-textarea" 
+                placeholder="介绍一下你自己..." 
+                rows="3"
+                maxlength="200"
+              ></textarea>
+            </div>
+            <div class="textarea-counter">
+              <span id="bioCounter">0</span>/200
+            </div>
+            <span class="form-error" id="bioError"></span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2 class="section-title">个性签名</h2>
+          
+          <div class="form-field">
+            <label class="form-label" for="signature">个性签名</label>
+            <div class="input-wrapper">
+              <input 
+                type="text" 
+                id="signature" 
+                class="form-input" 
+                placeholder="一句话描述自己" 
+                maxlength="100"
+              />
+            </div>
+            <div class="textarea-counter">
+              <span id="signatureCounter">0</span>/100
+            </div>
+            <span class="form-error" id="signatureError"></span>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="cancelBtn">取消</button>
+          <button type="submit" class="btn-primary" id="saveBtn">
+            <span class="button-text">保存</span>
+            <div class="button-loader" id="buttonLoader">
+              <svg viewBox="25 25 50 50">
+                <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100" class="loader-spinner"/>
+              </svg>
+            </div>
+          </button>
+        </div>
+      </form>
+
+      <div class="profile-footer">
+        <button type="button" class="logout-btn" id="logoutBtn">退出登录</button>
+      </div>
+
+      <div class="snackbar-container" id="snackbarContainer">
+        <div class="md3-snackbar" id="snackbar">
+          <div class="md3-snackbar-surface">
+            <div class="md3-snackbar-row">
+              <svg class="md3-snackbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span class="md3-snackbar-label" id="snackbarLabel"></span>
+            </div>
+            <button class="md3-snackbar-action" id="snackbarAction" type="button">
+              <span class="md3-snackbar-action-label">关闭</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/profile.js?v=2026071106"></script>
+</body>
+</html>

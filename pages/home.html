@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园论坛 - 首页</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=2026071105">
+</head>
+<body class="home-page">
+  <header class="home-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="menu-button" id="menuButton" aria-label="打开菜单">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+          </svg>
+        </button>
+        <a href="home.html" class="logo-link">
+          <svg class="logo" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="20" fill="url(#logoGradient)"/>
+            <path d="M16 20h4v8h-4v-8zm8 0h4v8h-4v-8zm8 0h4v8h-4v-8zM14 34h20v-2H14v2z" fill="white"/>
+            <defs>
+              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#673ab7"/>
+                <stop offset="100%" style="stop-color:#3f51b5"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="site-title">校园论坛 <span class="version-badge">Preview 2.0</span></span>
+        </a>
+      </div>
+
+      <div class="header-center">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" class="search-input" id="searchInput" placeholder="搜索帖子、用户、标签..." />
+          <button class="search-button" id="searchButton" aria-label="搜索">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="user-menu-button" id="userMenuButton" aria-label="用户菜单">
+          <img id="userAvatar" src="" alt="用户头像" class="user-avatar" />
+          <span class="user-nickname" id="userNickname"></span>
+          <svg class="menu-arrow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 10l5 5 5-5z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <nav class="category-nav">
+      <div class="category-scroll">
+        <button class="category-item active" data-category-id="" id="allCategory">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+          </svg>
+          <span>全部</span>
+        </button>
+        <div id="categoryList"></div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="home-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
+      <div class="sidebar-content">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <svg viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="20" fill="url(#sidebarLogoGradient)"/>
+              <path d="M16 20h4v8h-4v-8zm8 0h4v8h-4v-8zm8 0h4v8h-4v-8zM14 34h20v-2H14v2z" fill="white"/>
+              <defs>
+                <linearGradient id="sidebarLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#673ab7"/>
+                  <stop offset="100%" style="stop-color:#3f51b5"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <span class="sidebar-title">校园论坛</span>
+          <button class="sidebar-close" id="sidebarClose" aria-label="关闭菜单">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="section-title">快速导航</h3>
+          <ul class="nav-list">
+            <li class="nav-item active">
+              <a href="home.html">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+                <span>首页</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="profile.html">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span>个人资料</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="my-posts.html">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                <span>我的帖子</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="favorites.html">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+                <span>我的收藏</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="section-title">板块分类</h3>
+          <ul class="category-list" id="sidebarCategoryList"></ul>
+        </div>
+
+        <div class="sidebar-footer">
+          <button class="logout-btn" id="sidebarLogoutBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            <span>退出登录</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="posts-container" id="postsContainer">
+        <div class="create-post-card">
+          <a href="post.html" class="create-post-button">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+            <span>发布帖子</span>
+          </a>
+        </div>
+        <div class="posts-loading" id="postsLoading">
+          <svg class="loading-spinner" viewBox="25 25 50 50">
+            <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100"/>
+          </svg>
+          <span>加载中...</span>
+        </div>
+        <div class="posts-list" id="postsList"></div>
+        <div class="no-posts" id="noPosts" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <p>暂无帖子，快来发表第一篇吧！</p>
+          <a href="post.html" class="btn-primary">发帖</a>
+        </div>
+      </div>
+
+      <div class="pagination" id="pagination"></div>
+    </main>
+
+    <aside class="right-sidebar">
+      <div class="sidebar-card">
+        <h3 class="card-title">热门帖子</h3>
+        <div class="hot-posts" id="hotPosts"></div>
+      </div>
+
+      <div class="sidebar-card">
+        <h3 class="card-title">最新回复</h3>
+        <div class="latest-comments" id="latestComments"></div>
+      </div>
+
+      <div class="sidebar-card">
+        <h3 class="card-title">统计信息</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-value" id="totalPosts">0</span>
+            <span class="stat-label">总帖子</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="totalComments">0</span>
+            <span class="stat-label">总评论</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="totalUsers">0</span>
+            <span class="stat-label">总用户</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="snackbar-container" id="snackbarContainer">
+    <div class="md3-snackbar" id="snackbar">
+      <div class="md3-snackbar-surface">
+        <div class="md3-snackbar-row">
+          <svg class="md3-snackbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="md3-snackbar-label" id="snackbarLabel"></span>
+        </div>
+        <button class="md3-snackbar-action" id="snackbarAction" type="button">
+          <span class="md3-snackbar-action-label">关闭</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/home.js?v=2026071105"></script>
+</body>
+</html>

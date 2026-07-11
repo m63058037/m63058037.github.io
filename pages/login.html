@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园论坛 - 登录</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=2026071107">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-wrapper">
+          <svg class="logo" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="20" fill="url(#logoGradient)"/>
+            <path d="M16 20h4v8h-4v-8zm8 0h4v8h-4v-8zm8 0h4v8h-4v-8zM14 34h20v-2H14v2z" fill="white"/>
+            <defs>
+              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#673ab7"/>
+                <stop offset="100%" style="stop-color:#3f51b5"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="login-title">校园论坛</h1>
+        <p class="login-subtitle">欢迎回来，请登录您的账号</p>
+      </div>
+
+      <form class="login-form" id="loginForm" novalidate>
+        <div class="form-field">
+          <label class="form-label" for="uid">用户UID</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            <input 
+              type="text" 
+              id="uid" 
+              class="form-input" 
+              placeholder="请输入8位用户UID" 
+              required
+              autocomplete="username"
+            />
+            <span class="input-validation-icon"></span>
+          </div>
+          <span class="form-error" id="uidError"></span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="password">密码</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+            <input 
+              type="password" 
+              id="password" 
+              class="form-input" 
+              placeholder="请输入密码" 
+              required
+              autocomplete="current-password"
+            />
+            <button type="button" class="password-toggle" id="passwordToggle" aria-label="切换密码可见性">
+              <svg class="toggle-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+            </button>
+            <span class="input-validation-icon"></span>
+          </div>
+          <span class="form-error" id="passwordError"></span>
+        </div>
+
+        <div class="form-options">
+          <label class="checkbox-wrapper">
+            <input type="checkbox" id="rememberMe" class="checkbox-input">
+            <span class="checkbox-custom"></span>
+            <span class="checkbox-label">记住我</span>
+          </label>
+          <a href="#" class="forgot-password">忘记密码？</a>
+        </div>
+
+        <button type="submit" class="login-button" id="loginButton">
+          <span class="button-text">登录</span>
+          <div class="button-loader" id="buttonLoader">
+            <svg viewBox="25 25 50 50">
+              <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100" class="loader-spinner"/>
+            </svg>
+          </div>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <p class="signup-link">
+          还没有账号？
+          <a href="register.html" class="link-primary">立即注册</a>
+        </p>
+      </div>
+
+      <div class="snackbar-container" id="snackbarContainer">
+        <div class="md3-snackbar" id="snackbar">
+          <div class="md3-snackbar-surface">
+            <div class="md3-snackbar-row">
+              <svg class="md3-snackbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span class="md3-snackbar-label" id="snackbarLabel"></span>
+            </div>
+            <button class="md3-snackbar-action" id="snackbarAction" type="button">
+              <span class="md3-snackbar-action-label">关闭</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-decoration">
+      <div class="decoration-circle circle-1"></div>
+      <div class="decoration-circle circle-2"></div>
+      <div class="decoration-circle circle-3"></div>
+    </div>
+  </div>
+
+  <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/login.js?v=2026071108"></script>
+</body>
+</html>
