@@ -1,7 +1,6 @@
 import { apiService } from './api.js';
 import { authService } from './auth.js';
 import { loggerService } from './logger.js';
-import { supabase } from '../config/supabase.js';
 
 function createResponse(success, data = null, message = '', statusCode = 200) {
   return {
@@ -13,7 +12,7 @@ function createResponse(success, data = null, message = '', statusCode = 200) {
 }
 
 export const postService = {
-  async getPosts(page = 1, pageSize = 10) {
+  async getPosts(page = 1, pageSize = 10, categoryId = null) {
     try {
       const options = {
         select: '*',
@@ -23,6 +22,10 @@ export const postService = {
           { column: 'created_at', ascending: false }
         ]
       };
+
+      if (categoryId) {
+        options.filter.category_id = categoryId;
+      }
 
       const response = await apiService.paginate('posts', page, pageSize, options);
       
@@ -34,11 +37,9 @@ export const postService = {
       const pagination = response.data.pagination;
 
       const postsWithUser = await this._attachUserInfo(posts);
-      const postsWithImages = await this._attachPostImages(postsWithUser);
 
-      return createResponse(true, { posts: postsWithImages, pagination }, '', 200);
+      return createResponse(true, { posts: postsWithUser, pagination }, '', 200);
     } catch (error) {
-      console.error('PostService getPosts error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -60,31 +61,28 @@ export const postService = {
       }
 
       const postWithUser = await this._attachUserInfo([post]);
-      const postWithImages = await this._attachPostImages(postWithUser);
 
-      return createResponse(true, postWithImages[0], '', 200);
+      return createResponse(true, postWithUser[0], '', 200);
     } catch (error) {
-      console.error('PostService getPostById error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
 
-  async createPost(title, content, tags = []) {
-    let userId = null;
+  async createPost(title, content, categoryId = null, tags = []) {
     try {
       const userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
         return createResponse(false, null, userResponse.message, userResponse.statusCode);
       }
 
-      userId = userResponse.data.id;
-      const safeTags = tags || [];
+      const userId = userResponse.data.id;
 
       const postData = {
         user_id: userId,
         title: title.trim(),
         content: content.trim(),
-        tags: safeTags.length > 0 ? safeTags : [],
+        category_id: categoryId,
+        tags: tags.length > 0 ? tags : null,
         excerpt: content.trim().substring(0, 300),
         is_pinned: false,
         is_hot: false,
@@ -109,14 +107,14 @@ export const postService = {
       
       return createResponse(true, post, '帖子发布成功', 201);
     } catch (error) {
-      console.error('PostService createPost error:', error);
       loggerService.logError(error, { operation: 'create_post', table: 'posts' });
+      const userId = userResponse.data?.id;
       await loggerService.logPost(userId, null, 'create', 'failed', { title, error: error.message });
       return createResponse(false, null, error.message, 500);
     }
   },
 
-  async updatePost(postId, title, content, tags = []) {
+  async updatePost(postId, title, content, categoryId = null, tags = []) {
     try {
       const userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
@@ -137,7 +135,8 @@ export const postService = {
       const updateData = {
         title: title.trim(),
         content: content.trim(),
-        tags: tags.length > 0 ? tags : [],
+        category_id: categoryId,
+        tags: tags.length > 0 ? tags : null,
         excerpt: content.trim().substring(0, 300)
       };
 
@@ -149,7 +148,6 @@ export const postService = {
 
       return createResponse(true, response.data[0], '帖子更新成功', 200);
     } catch (error) {
-      console.error('PostService updatePost error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -180,7 +178,6 @@ export const postService = {
 
       return createResponse(true, null, '帖子删除成功', 200);
     } catch (error) {
-      console.error('PostService deletePost error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -195,7 +192,6 @@ export const postService = {
 
       return createResponse(true, null, '', 200);
     } catch (error) {
-      console.error('PostService incrementViews error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -214,9 +210,10 @@ export const postService = {
         return createResponse(false, null, response.message, response.statusCode);
       }
 
-      return createResponse(true, response.data, '', 200);
+      const postsWithUser = await this._attachUserInfo(response.data.data);
+
+      return createResponse(true, { data: postsWithUser, pagination: response.data.pagination }, '', 200);
     } catch (error) {
-      console.error('PostService getUserPosts error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -243,7 +240,6 @@ export const postService = {
 
       return createResponse(true, response.data, '图片关联保存成功', 201);
     } catch (error) {
-      console.error('PostService savePostImages error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -262,7 +258,6 @@ export const postService = {
 
       return createResponse(true, response.data, '', 200);
     } catch (error) {
-      console.error('PostService getPostImages error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -283,58 +278,35 @@ export const postService = {
             users[userId] = userInfo;
           }
         } catch (e) {
-          console.warn('Failed to fetch user info for:', userId);
+          // Skip failed user info fetch
         }
       }
 
-      return posts.map(post => ({
-        ...post,
-        user: users[post.user_id] || { id: post.user_id, nickname: '用户', avatar: null }
-      }));
-    } catch (error) {
-      console.error('PostService _attachUserInfo error:', error);
-      return posts.map(post => ({
-        ...post,
-        user: { id: post.user_id, nickname: '用户', avatar: null }
-      }));
-    }
-  },
-
-  async _attachPostImages(posts) {
-    try {
-      if (!posts || posts.length === 0) {
-        return [];
-      }
-
-      const postIds = [...new Set(posts.map(post => post.id))];
-      const postImagesMap = {};
-
-      for (const postId of postIds) {
-        try {
-          const response = await this.getPostImages(postId);
-          if (response.success && response.data.length > 0) {
-            postImagesMap[postId] = response.data.map(img => ({
-              id: img.id,
-              image_url: img.url ? img.url.trim().replace(/^`|`$/g, '') : '',
-              path: img.path,
-              file_name: img.file_name,
-              sort_order: img.sort_order
-            }));
+      const postsWithImages = await Promise.all(
+        posts.map(async (post) => {
+          let images = [];
+          try {
+            const imgResponse = await this.getPostImages(post.id);
+            if (imgResponse.success && imgResponse.data) {
+              images = imgResponse.data;
+            }
+          } catch (e) {
+            // Skip failed image fetch
           }
-        } catch (e) {
-          console.warn('Failed to fetch images for post:', postId);
-        }
-      }
+          return {
+            ...post,
+            images,
+            user: users[post.user_id] || { id: post.user_id, nickname: '用户', avatar: null }
+          };
+        })
+      );
 
-      return posts.map(post => ({
-        ...post,
-        images: postImagesMap[post.id] || []
-      }));
+      return postsWithImages;
     } catch (error) {
-      console.error('PostService _attachPostImages error:', error);
       return posts.map(post => ({
         ...post,
-        images: []
+        images: [],
+        user: { id: post.user_id, nickname: '用户', avatar: null }
       }));
     }
   }

@@ -7,7 +7,9 @@ export class RightSidebarComponent {
     this.totalPosts = document.getElementById('totalPosts');
     this.totalComments = document.getElementById('totalComments');
     this.totalUsers = document.getElementById('totalUsers');
-    
+
+    this.snackbarTimer = null;
+
     this.init();
   }
   
@@ -17,11 +19,11 @@ export class RightSidebarComponent {
         this.loadHotPosts(),
         this.loadStats()
       ]);
+      this.renderLatestComments();
     } catch (error) {
-      console.error('RightSidebar init error:', error);
     }
   }
-  
+
   async loadHotPosts() {
     try {
       const response = await postService.getPosts(1, 5);
@@ -33,7 +35,6 @@ export class RightSidebarComponent {
       
       this.renderHotPosts(response.data.posts);
     } catch (error) {
-      console.error('RightSidebar loadHotPosts error:', error);
       this.renderHotPosts([]);
     }
   }
@@ -65,20 +66,40 @@ export class RightSidebarComponent {
       const pagination = response.data.pagination;
       
       this.renderStats({
-        totalPosts: pagination.totalItems || 0,
+        totalPosts: pagination.total || pagination.totalItems || 0,
         totalComments: 0,
         totalUsers: 0
       });
     } catch (error) {
-      console.error('RightSidebar loadStats error:', error);
       this.renderStats({ totalPosts: 0, totalComments: 0, totalUsers: 0 });
     }
   }
   
   renderStats(stats) {
-    this.totalPosts.textContent = stats.totalPosts.toLocaleString();
-    this.totalComments.textContent = stats.totalComments.toLocaleString();
-    this.totalUsers.textContent = stats.totalUsers.toLocaleString();
+    this.totalPosts.textContent = (stats.totalPosts || 0).toLocaleString();
+    this.totalComments.textContent = '—';
+    this.totalUsers.textContent = '—';
+  }
+
+  renderLatestComments() {
+    if (this.latestComments) {
+      this.latestComments.innerHTML = '<p class="no-data">暂无最新回复</p>';
+    }
+  }
+
+  showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
+    const snackbar = document.getElementById('snackbar');
+    const snackbarLabel = document.getElementById('snackbarLabel');
+    if (snackbar && snackbarLabel) {
+      snackbarLabel.textContent = message;
+      snackbar.classList.add('show');
+      this.snackbarTimer = setTimeout(() => {
+        snackbar.classList.remove('show');
+      }, 5000);
+    }
   }
 }
 

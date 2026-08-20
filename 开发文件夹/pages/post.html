@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=2026071101">
+  <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body class="post-page">
   <header class="simple-header">
@@ -18,17 +18,19 @@
       <span>返回</span>
     </button>
     <h1 class="page-title">发帖</h1>
-    <div class="header-actions"></div>
+    <div class="header-actions">
+      <button class="submit-button" id="submitButton">发布</button>
+    </div>
   </header>
 
   <main class="post-content">
     <form class="post-form" id="postForm" novalidate>
       <div class="form-section">
         <label class="form-label" for="content">内容</label>
-        <textarea 
-          id="content" 
-          class="form-textarea post-content-textarea" 
-          placeholder="请输入帖子内容..." 
+        <textarea
+          id="content"
+          class="form-textarea post-content-textarea"
+          placeholder="请输入帖子内容..."
           required
         ></textarea>
         <span class="input-counter" id="contentCounter">0</span>
@@ -52,17 +54,13 @@
 
       <div class="form-section">
         <label class="form-label" for="tags">标签</label>
-        <input 
-          type="text" 
-          id="tags" 
-          class="form-input" 
-          placeholder="输入标签，用逗号分隔" 
+        <input
+          type="text"
+          id="tags"
+          class="form-input"
+          placeholder="输入标签，用逗号分隔"
         />
         <p class="form-hint">标签可以帮助其他用户更好地找到您的帖子</p>
-      </div>
-
-      <div class="form-section submit-section">
-        <button class="submit-button" id="submitButton">发布</button>
       </div>
     </form>
   </main>
@@ -86,6 +84,6 @@
   </div>
 
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/post.js?v=2026071101"></script>
+  <script type="module" src="../js/post.js"></script>
 </body>
 </html>

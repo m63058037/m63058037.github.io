@@ -12,20 +12,20 @@ class LoginPage {
     this.snackbarAction = document.getElementById('snackbarAction');
     this.uidError = document.getElementById('uidError');
     this.passwordError = document.getElementById('passwordError');
-    this.signupLink = document.querySelector('.signup-link .link-primary');
+    this.forgotPasswordLink = document.getElementById('forgotPasswordLink');
+
+    this.snackbarTimer = null;
 
     this.init();
   }
 
   async init() {
-    this.bindEvents();
-    
     try {
       await this.checkSession();
       await this.getCurrentUser();
       this.renderPage();
+      this.bindEvents();
     } catch (error) {
-      console.error('Login init error:', error);
     }
   }
 
@@ -60,10 +60,13 @@ class LoginPage {
     
     this.passwordToggle.addEventListener('click', () => this.togglePassword());
     
-    this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
-
-    if (this.signupLink) {
-      this.signupLink.addEventListener('click', () => this.handleSignupClick());
+    this.forgotPasswordLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showSnackbar('密码找回功能开发中，请联系管理员重置');
+    });
+    
+    if (this.snackbarAction) {
+      this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
     }
 
     this.uidInput.addEventListener('keydown', (e) => {
@@ -139,7 +142,6 @@ class LoginPage {
         this.showSnackbar(response.message);
       }
     } catch (error) {
-      console.error('Login error:', error);
       this.showSnackbar('登录失败，请稍后重试');
     } finally {
       this.setLoading(false);
@@ -151,6 +153,7 @@ class LoginPage {
     this.passwordInput.type = type;
     
     const icon = this.passwordToggle.querySelector('.toggle-icon');
+    if (!icon) return;
     if (type === 'password') {
       icon.innerHTML = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
     } else {
@@ -173,10 +176,13 @@ class LoginPage {
   }
 
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    
-    setTimeout(() => {
+
+    this.snackbarTimer = setTimeout(() => {
       this.hideSnackbar();
     }, 5000);
   }
@@ -189,8 +195,12 @@ class LoginPage {
     window.location.href = 'home.html';
   }
 
-  handleSignupClick() {
-    window.location.href = 'register.html';
+  goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = 'home.html';
+    }
   }
 }
 

@@ -42,7 +42,6 @@ export const storageService = {
         });
 
       if (uploadError) {
-        console.error('Storage uploadAvatar error:', uploadError);
         return createResponse(false, null, uploadError.message, 500);
       }
 
@@ -56,21 +55,13 @@ export const storageService = {
         fileName: uniqueFileName
       }, '头像上传成功', 200);
     } catch (error) {
-      console.error('Storage uploadAvatar exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
 
   async uploadPostImages(files, postId) {
     try {
-      console.log('[DEBUG storageService] uploadPostImages called');
-      console.log('[DEBUG storageService] files:', files);
-      console.log('[DEBUG storageService] files.length:', files?.length);
-      console.log('[DEBUG storageService] postId:', postId);
-      console.log('[DEBUG storageService] POST_IMAGES_BUCKET:', POST_IMAGES_BUCKET);
-
       if (!files || !postId || files.length === 0) {
-        console.log('[DEBUG storageService] Invalid parameters');
         return createResponse(false, null, '参数错误', 400);
       }
 
@@ -82,8 +73,6 @@ export const storageService = {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        console.log('[DEBUG storageService] Processing file:', file.name, file.size, file.type);
-        
         const fileExt = file.name.split('.').pop().toLowerCase();
 
         if (!ALLOWED_AVATAR_EXTENSIONS.includes(fileExt)) {
@@ -96,7 +85,6 @@ export const storageService = {
 
         const uniqueFileName = `image-${i + 1}-${Date.now()}.${fileExt}`;
         const filePath = `${postId}/${uniqueFileName}`;
-        console.log('[DEBUG storageService] Uploading to:', POST_IMAGES_BUCKET, filePath);
 
         const { error: uploadError } = await supabase.storage
           .from(POST_IMAGES_BUCKET)
@@ -106,30 +94,23 @@ export const storageService = {
           });
 
         if (uploadError) {
-          console.error('[ERROR storageService] Upload error:', uploadError);
           return createResponse(false, null, uploadError.message, 500);
         }
-
-        console.log('[DEBUG storageService] File uploaded successfully:', filePath);
 
         const { data: { publicUrl } } = supabase.storage
           .from(POST_IMAGES_BUCKET)
           .getPublicUrl(filePath);
 
-        const cleanedUrl = publicUrl.trim().replace(/^`|`$/g, '');
-
         uploadedImages.push({
-          url: cleanedUrl,
+          url: publicUrl,
           path: filePath,
           fileName: uniqueFileName,
           sortOrder: i
         });
       }
 
-      console.log('[DEBUG storageService] All files uploaded successfully:', uploadedImages.length);
       return createResponse(true, uploadedImages, '图片上传成功', 200);
     } catch (error) {
-      console.error('[ERROR storageService] uploadPostImages exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -145,13 +126,11 @@ export const storageService = {
         .remove([filePath]);
 
       if (error) {
-        console.error('Storage deleteImage error:', error);
         return createResponse(false, null, error.message, 500);
       }
 
       return createResponse(true, null, '图片删除成功', 200);
     } catch (error) {
-      console.error('Storage deleteImage exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -167,13 +146,11 @@ export const storageService = {
         .getPublicUrl(filePath);
 
       if (error) {
-        console.error('Storage getPublicUrl error:', error);
         return createResponse(false, null, error.message, 500);
       }
 
       return createResponse(true, publicUrl, '', 200);
     } catch (error) {
-      console.error('Storage getPublicUrl exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   }

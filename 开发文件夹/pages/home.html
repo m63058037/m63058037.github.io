@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=2026071105">
+  <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body class="home-page">
   <header class="home-header">
@@ -51,7 +51,7 @@
 
       <div class="header-right">
         <button class="user-menu-button" id="userMenuButton" aria-label="用户菜单">
-          <img id="userAvatar" src="" alt="用户头像" class="user-avatar" />
+          <img id="userAvatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="用户头像" class="user-avatar" />
           <span class="user-nickname" id="userNickname"></span>
           <svg class="menu-arrow" viewBox="0 0 24 24" fill="currentColor">
             <path d="M7 10l5 5 5-5z"/>
@@ -74,8 +74,8 @@
   </header>
 
   <div class="home-container">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-overlay" id="sidebarOverlay"></div>
       <div class="sidebar-content">
         <div class="sidebar-header">
           <div class="sidebar-logo">
@@ -144,7 +144,7 @@
         <div class="sidebar-footer">
           <button class="logout-btn" id="sidebarLogoutBtn">
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
             <span>退出登录</span>
           </button>
@@ -233,6 +233,6 @@
   </div>
 
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/home.js?v=2026071105"></script>
+  <script type="module" src="../js/home.js?v=20260728"></script>
 </body>
 </html>

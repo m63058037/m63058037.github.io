@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>图片响应式测试</title>
+  <link rel="stylesheet" href="../css/styles.css?v=2026072803">
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      max-width: 600px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .test-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .test-info {
+      background: #e8e8e8;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    .test-btn {
+      background: #6750a4;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center;">图片响应式布局测试</h1>
+
+  <div class="test-section">
+    <div class="test-title">测试1：单图</div>
+    <div class="post-detail-card" style="width: 100%;">
+      <div class="post-detail-content">
+        <div class="post-detail-images single" id="testSingle">
+          <img class="detail-image" src="https://picsum.photos/800/600" alt="测试图片1">
+        </div>
+      </div>
+    </div>
+    <div class="test-info" id="infoSingle"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">测试2：双图</div>
+    <div class="post-detail-card" style="width: 100%;">
+      <div class="post-detail-content">
+        <div class="post-detail-images two" id="testTwo">
+          <img class="detail-image" src="https://picsum.photos/600/800" alt="测试图片2">
+          <img class="detail-image" src="https://picsum.photos/500/500" alt="测试图片3">
+        </div>
+      </div>
+    </div>
+    <div class="test-info" id="infoTwo"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">测试3：三图（网格）</div>
+    <div class="post-detail-card" style="width: 100%;">
+      <div class="post-detail-content">
+        <div class="post-detail-images" id="testThree">
+          <img class="detail-image" src="https://picsum.photos/400/400" alt="测试图片4">
+          <img class="detail-image" src="https://picsum.photos/400/500" alt="测试图片5">
+          <img class="detail-image" src="https://picsum.photos/500/400" alt="测试图片6">
+        </div>
+      </div>
+    </div>
+    <div class="test-info" id="infoThree"></div>
+  </div>
+
+  <div style="text-align:center; margin: 20px;">
+    <button class="test-btn" onclick="getInfo()">获取尺寸信息</button>
+    <button class="test-btn" onclick="window.resizeTo(400, 800)">模拟手机尺寸</button>
+    <button class="test-btn" onclick="location.reload()">刷新页面</button>
+  </div>
+
+  <script>
+    function getInfo() {
+      const tests = ['testSingle', 'testTwo', 'testThree'];
+      tests.forEach(id => {
+        const container = document.getElementById(id);
+        const infoEl = document.getElementById('info' + id.replace('test', ''));
+        const images = container.querySelectorAll('.detail-image');
+        const card = container.closest('.post-detail-card');
+        
+        let msg = '';
+        msg += `容器宽度: ${card ? card.clientWidth : 'N/A'}px\n`;
+        msg += `图片区域宽度: ${container.clientWidth}px\n`;
+        msg += `------------------------\n`;
+        
+        images.forEach((img, i) => {
+          msg += `图片 ${i+1}:\n`;
+          msg += `  clientWidth: ${img.clientWidth}px\n`;
+          msg += `  naturalWidth: ${img.naturalWidth}px\n`;
+          msg += `  clientHeight: ${img.clientHeight}px\n`;
+          msg += `  naturalHeight: ${img.naturalHeight}px\n`;
+          msg += `  computed width: ${getComputedStyle(img).width}\n`;
+          msg += `  computed max-width: ${getComputedStyle(img).maxWidth}\n`;
+          msg += `  computed height: ${getComputedStyle(img).height}\n`;
+          msg += `  computed max-height: ${getComputedStyle(img).maxHeight}\n`;
+          msg += `  parent width: ${img.parentElement.clientWidth}px\n`;
+          msg += `------------------------\n`;
+        });
+        
+        if (infoEl) infoEl.textContent = msg;
+        console.log(id, msg);
+      });
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(getInfo, 500);
+    });
+
+    window.addEventListener('resize', () => {
+      setTimeout(getInfo, 200);
+    });
+  </script>
+</body>
+</html>

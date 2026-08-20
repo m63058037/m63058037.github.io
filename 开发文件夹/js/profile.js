@@ -10,6 +10,7 @@ class ProfilePage {
     this.saveBtn = document.getElementById('saveBtn');
     this.cancelBtn = document.getElementById('cancelBtn');
     this.logoutBtn = document.getElementById('logoutBtn');
+    this.backButton = document.getElementById('backButton');
     
     this.avatarImg = document.getElementById('avatarImg');
     this.avatarUploadBtn = document.getElementById('avatarUploadBtn');
@@ -32,6 +33,7 @@ class ProfilePage {
     
     this.originalData = {};
     this.currentUser = null;
+    this.snackbarTimer = null;
     
     this.init();
   }
@@ -44,7 +46,6 @@ class ProfilePage {
       this.renderPage();
       this.bindEvents();
     } catch (error) {
-      console.error('Profile init error:', error);
       this.showSnackbar('页面初始化失败');
     }
   }
@@ -69,7 +70,7 @@ class ProfilePage {
     if (!this.currentUser) return;
     
     this.originalData = {
-      nickname: this.currentUser.nickname,
+      nickname: this.currentUser.nickname || '',
       bio: this.currentUser.bio || '',
       signature: this.currentUser.signature || ''
     };
@@ -97,8 +98,12 @@ class ProfilePage {
 
   bindEvents() {
     this.profileForm.addEventListener('submit', (e) => this.handleSubmit(e));
-    this.cancelBtn.addEventListener('click', () => this.handleCancel());
+    this.cancelBtn.addEventListener('click', () => this.resetForm());
     this.logoutBtn.addEventListener('click', () => this.handleLogout());
+    
+    if (this.backButton) {
+      this.backButton.addEventListener('click', () => this.goBack());
+    }
     
     this.nicknameInput.addEventListener('input', () => this.validateNickname());
     this.bioInput.addEventListener('input', () => {
@@ -216,7 +221,6 @@ class ProfilePage {
         this.showSnackbar(response.message);
       }
     } catch (error) {
-      console.error('Save profile error:', error);
       this.showSnackbar('保存失败，请稍后重试');
     } finally {
       this.setLoading(false);
@@ -229,24 +233,12 @@ class ProfilePage {
            this.signatureInput.value.trim() !== this.originalData.signature;
   }
 
-  handleCancel() {
-    if (this.hasChanges()) {
-      if (!confirm('您有未保存的修改，确定要离开吗？')) {
-        return;
-      }
-    }
-    
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.location.href = 'home.html';
-    }
-  }
-
   resetForm() {
-    this.nicknameInput.value = this.originalData.nickname;
-    this.bioInput.value = this.originalData.bio;
-    this.signatureInput.value = this.originalData.signature;
+    const hadChanges = this.hasChanges();
+
+    this.nicknameInput.value = this.originalData.nickname || '';
+    this.bioInput.value = this.originalData.bio || '';
+    this.signatureInput.value = this.originalData.signature || '';
     
     this.updateCounter(this.bioInput, this.bioCounter);
     this.updateCounter(this.signatureInput, this.signatureCounter);
@@ -254,12 +246,29 @@ class ProfilePage {
     this.nicknameError.textContent = '';
     this.bioError.textContent = '';
     this.signatureError.textContent = '';
+
+    if (hadChanges) {
+      this.showSnackbar('已恢复原状态');
+    } else {
+      this.goBack();
+    }
   }
 
   async handleAvatarUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
     
+    if (!file.type.startsWith('image/')) {
+      this.showSnackbar('请选择图片文件');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      this.showSnackbar('图片大小不能超过5MB');
+      return;
+    }
+    
+    this.avatarUploadBtn.disabled = true;
     this.avatarUploadStatus.textContent = '上传中...';
     
     try {
@@ -282,16 +291,18 @@ class ProfilePage {
           this.showSnackbar('头像更新成功');
         } else {
           this.avatarUploadStatus.textContent = '上传失败';
-          this.showSnackbar(updateResponse.message);
+          this.showSnackbar(updateResponse.message || '头像关联失败');
         }
       } else {
         this.avatarUploadStatus.textContent = '上传失败';
-        this.showSnackbar(response.message);
+        this.showSnackbar(response.message || '头像上传失败');
       }
     } catch (error) {
-      console.error('Avatar upload error:', error);
       this.avatarUploadStatus.textContent = '上传失败';
       this.showSnackbar('头像上传失败');
+    } finally {
+      this.avatarUploadBtn.disabled = false;
+      this.avatarFileInput.value = '';
     }
   }
 
@@ -300,16 +311,19 @@ class ProfilePage {
       return;
     }
     
+    this.logoutBtn.disabled = true;
+    
     try {
       const response = await authService.logout();
       if (response.success) {
         this.redirectToLogin();
       } else {
-        this.showSnackbar(response.message);
+        this.showSnackbar(response.message || '退出登录失败');
       }
     } catch (error) {
-      console.error('Logout error:', error);
       this.showSnackbar('退出登录失败');
+    } finally {
+      this.logoutBtn.disabled = false;
     }
   }
 
@@ -318,6 +332,8 @@ class ProfilePage {
       this.saveBtn.classList.add('loading');
       this.saveBtn.disabled = true;
       this.cancelBtn.disabled = true;
+      this.logoutBtn.disabled = true;
+      this.avatarUploadBtn.disabled = true;
       this.nicknameInput.disabled = true;
       this.bioInput.disabled = true;
       this.signatureInput.disabled = true;
@@ -325,6 +341,8 @@ class ProfilePage {
       this.saveBtn.classList.remove('loading');
       this.saveBtn.disabled = false;
       this.cancelBtn.disabled = false;
+      this.logoutBtn.disabled = false;
+      this.avatarUploadBtn.disabled = false;
       this.nicknameInput.disabled = false;
       this.bioInput.disabled = false;
       this.signatureInput.disabled = false;
@@ -335,13 +353,28 @@ class ProfilePage {
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
     
-    setTimeout(() => {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
+    this.snackbarTimer = setTimeout(() => {
       this.hideSnackbar();
     }, 5000);
   }
 
   hideSnackbar() {
     this.snackbar.classList.remove('show');
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+      this.snackbarTimer = null;
+    }
+  }
+
+  goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = 'home.html';
+    }
   }
 
   redirectToLogin() {

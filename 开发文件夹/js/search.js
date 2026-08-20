@@ -20,6 +20,8 @@ class SearchPage {
     this.snackbarLabel = document.getElementById('snackbarLabel');
     this.snackbarAction = document.getElementById('snackbarAction');
 
+    this.snackbarTimer = null;
+
     this.init();
   }
 
@@ -37,7 +39,6 @@ class SearchPage {
       }
       this.bindEvents();
     } catch (error) {
-      console.error('Search init error:', error);
       this.showSnackbar('加载失败');
     }
   }
@@ -58,10 +59,17 @@ class SearchPage {
     this.noResults.style.display = 'none';
     this.resultsList.innerHTML = '';
 
-    setTimeout(() => {
-      this.showLoading(false);
+    this.showLoading(false);
+    if (this.noResults) {
       this.noResults.style.display = 'flex';
-    }, 500);
+      const noResultsP = this.noResults.querySelector('p');
+      if (noResultsP) {
+        noResultsP.textContent = '搜索功能开发中';
+      } else {
+        this.noResults.innerHTML = '<p>搜索功能开发中</p>';
+      }
+    }
+    this.showSnackbar('搜索功能开发中');
   }
 
   showLoading(isLoading) {
@@ -75,12 +83,20 @@ class SearchPage {
   }
 
   bindEvents() {
-    this.backButton.addEventListener('click', () => this.goBack());
-    this.searchButton.addEventListener('click', () => this.handleSearch());
-    this.searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.handleSearch();
-    });
-    this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    if (this.backButton) {
+      this.backButton.addEventListener('click', () => this.goBack());
+    }
+    if (this.searchButton) {
+      this.searchButton.addEventListener('click', () => this.handleSearch());
+    }
+    if (this.searchInput) {
+      this.searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.handleSearch();
+      });
+    }
+    if (this.snackbarAction) {
+      this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    }
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -95,14 +111,20 @@ class SearchPage {
 
   handleSearch() {
     const keyword = this.searchInput.value.trim();
-    if (!keyword) return;
+    if (!keyword) {
+      this.showSnackbar('请输入搜索内容');
+      return;
+    }
     window.location.href = `search.html?keyword=${encodeURIComponent(keyword)}`;
   }
 
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    setTimeout(() => this.hideSnackbar(), 5000);
+    this.snackbarTimer = setTimeout(() => this.hideSnackbar(), 5000);
   }
 
   hideSnackbar() {

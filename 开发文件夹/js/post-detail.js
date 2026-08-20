@@ -27,6 +27,7 @@ class PostDetailPage {
     this.detailComments = document.getElementById('detailComments');
 
     this.likeBtn = document.getElementById('detailLikeBtn');
+    this.detailFavoriteBtn = document.getElementById('detailFavoriteBtn');
 
     this.editBtn = document.getElementById('editBtn');
     this.deleteBtn = document.getElementById('deleteBtn');
@@ -41,6 +42,8 @@ class PostDetailPage {
     this.snackbar = document.getElementById('snackbar');
     this.snackbarLabel = document.getElementById('snackbarLabel');
     this.snackbarAction = document.getElementById('snackbarAction');
+
+    this.snackbarTimer = null;
 
     this.init();
   }
@@ -59,7 +62,6 @@ class PostDetailPage {
       await this.loadComments();
       this.bindEvents();
     } catch (error) {
-      console.error('Post detail init error:', error);
       this.showSnackbar('加载失败');
     }
   }
@@ -81,6 +83,7 @@ class PostDetailPage {
 
   async loadPost() {
     if (!this.postId) {
+      this.postDetailLoading.style.display = 'none';
       this.showSnackbar('帖子ID无效');
       return;
     }
@@ -88,31 +91,39 @@ class PostDetailPage {
     const response = await postService.getPostById(this.postId);
 
     if (!response.success) {
-      this.showSnackbar(response.message);
+      this.postDetailLoading.style.display = 'none';
+      this.postDetailCard.style.display = 'block';
+      this.detailTitle.textContent = '加载失败';
+      this.detailBody.textContent = response.message || '无法加载帖子内容，请稍后重试';
+      this.showSnackbar(response.message || '加载失败');
       return;
     }
 
     const post = response.data;
 
-    console.log('[DEBUG post-detail] Post Data:', post);
-    console.log('[DEBUG post-detail] Post Images:', post.images);
-    console.log('[DEBUG post-detail] Post Images Type:', typeof post.images);
-    console.log('[DEBUG post-detail] Post Images is Array:', Array.isArray(post.images));
-    console.log('[DEBUG post-detail] Post Images Length:', post.images?.length || 0);
-
     this.postDetailLoading.style.display = 'none';
     this.postDetailCard.style.display = 'block';
 
+    this.detailBadges.innerHTML = '';
+    this.detailTags.innerHTML = '';
+    this.detailImages.innerHTML = '';
+    this.detailCategory.style.display = 'none';
+
     const avatarUrl = post.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user?.id || post.user_id}`;
     this.detailAuthorAvatar.src = avatarUrl;
+    this.detailAuthorAvatar.onerror = () => {
+      if (this.detailAuthorAvatar.dataset.errorHandled) return;
+      this.detailAuthorAvatar.dataset.errorHandled = 'true';
+      this.detailAuthorAvatar.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user?.id || post.user_id}`;
+    };
     this.detailAuthorName.textContent = post.user?.nickname || '用户';
     this.detailPostTime.textContent = this.formatTime(post.created_at);
     this.detailTitle.textContent = post.title;
     this.detailBody.textContent = post.content;
-    this.detailViews.textContent = post.views_count;
-    this.detailLikes.textContent = post.likes_count;
-    this.detailFavorites.textContent = post.favorites_count;
-    this.detailComments.textContent = post.comments_count;
+    this.detailViews.textContent = post.views_count || 0;
+    this.detailLikes.textContent = post.likes_count || 0;
+    this.detailFavorites.textContent = post.favorites_count || 0;
+    this.detailComments.textContent = post.comments_count || 0;
 
     if (post.is_pinned) {
       const badge = document.createElement('span');
@@ -136,9 +147,7 @@ class PostDetailPage {
       });
     }
 
-    if (post.images && post.images.length > 0) {
-      this.renderImages(post.images);
-    }
+    await this.loadPostImages();
 
     if (this.currentUser && this.currentUser.id === post.user_id) {
       this.editBtn.style.display = 'flex';
@@ -148,53 +157,31 @@ class PostDetailPage {
     postService.incrementViews(this.postId);
   }
 
-  renderImages(images) {
-    console.log('[DEBUG post-detail] Entering renderImages');
-    console.log('[DEBUG post-detail] images parameter:', images);
-    console.log('[DEBUG post-detail] detailImages element:', this.detailImages);
-    console.log('[DEBUG post-detail] detailImages exists:', !!this.detailImages);
-    
-    if (!this.detailImages) {
-      console.error('[DEBUG post-detail] detailImages element is null!');
-      return;
+  async loadPostImages() {
+    const response = await postService.getPostImages(this.postId);
+    if (response.success && response.data && response.data.length > 0) {
+      this.renderImages(response.data);
     }
-    
+  }
+
+  renderImages(images) {
+    if (!this.detailImages) return;
+
     this.detailImages.innerHTML = '';
-    console.log('[DEBUG post-detail] images length:', images.length);
-    
+
     images.forEach((image, index) => {
-      console.log(`[DEBUG post-detail] Image ${index}:`, image);
-      console.log(`[DEBUG post-detail] Image ${index} image_url:`, image.image_url);
-      
-      const renderUrl = image.image_url;
-      console.log('[DEBUG post-detail] render image url:', renderUrl);
-      console.log('[DEBUG post-detail] render image url type:', typeof renderUrl);
-      console.log('[DEBUG post-detail] render image url starts with http:', renderUrl?.startsWith('http'));
-      console.log('[DEBUG post-detail] render image url length:', renderUrl?.length);
-      
+      const renderUrl = image.image_url || image.url;
       if (renderUrl) {
         const img = document.createElement('img');
         img.src = renderUrl;
         img.className = 'detail-image';
-        console.log('[DEBUG post-detail] img.src final value:', img.src);
-        console.log(`[DEBUG post-detail] Created img element:`, img);
-        
-        img.onload = () => {
-          console.log('[DEBUG post-detail] Image loaded successfully:', renderUrl);
+        img.alt = `帖子图片${index + 1}`;
+        img.onerror = () => {
+          img.style.display = 'none';
         };
-        
-        img.onerror = (e) => {
-          console.error('[DEBUG post-detail] Image load failed:', renderUrl);
-          console.error('[DEBUG post-detail] Error event:', e);
-        };
-        
         this.detailImages.appendChild(img);
-      } else {
-        console.error('[DEBUG post-detail] Image URL is empty or null:', image);
       }
     });
-    
-    console.log('[DEBUG post-detail] renderImages completed');
   }
 
   async loadLikes() {
@@ -209,12 +196,14 @@ class PostDetailPage {
     const response = await commentService.getComments(this.postId);
     if (response.success) {
       this.renderComments(response.data.comments);
+    } else {
+      this.commentsList.innerHTML = '<p class="no-data">暂无评论</p>';
     }
   }
 
   renderComments(comments) {
     this.commentsList.innerHTML = '';
-    if (comments.length === 0) {
+    if (!comments || comments.length === 0) {
       this.commentsList.innerHTML = '<p class="no-data">暂无评论</p>';
       return;
     }
@@ -308,14 +297,18 @@ class PostDetailPage {
   async handleDelete() {
     if (!confirm('确定要删除这篇帖子吗？')) return;
 
-    const response = await postService.deletePost(this.postId);
-    if (response.success) {
-      this.showSnackbar('帖子已删除');
-      setTimeout(() => {
-        window.location.href = 'home.html';
-      }, 1500);
-    } else {
-      this.showSnackbar(response.message);
+    try {
+      const response = await postService.deletePost(this.postId);
+      if (response.success) {
+        this.showSnackbar('帖子已删除');
+        setTimeout(() => {
+          window.location.href = 'home.html';
+        }, 1500);
+      } else {
+        this.showSnackbar(response.message);
+      }
+    } catch (error) {
+      this.showSnackbar('删除失败，请稍后重试');
     }
   }
 
@@ -328,16 +321,20 @@ class PostDetailPage {
     this.editBtn.addEventListener('click', () => this.handleEdit());
     this.deleteBtn.addEventListener('click', () => this.handleDelete());
     this.reportBtn.addEventListener('click', () => this.showSnackbar('举报功能开发中'));
+    this.moreButton.addEventListener('click', () => this.showSnackbar('更多功能开发中'));
+    if (this.detailFavoriteBtn) {
+      this.detailFavoriteBtn.addEventListener('click', () => this.showSnackbar('收藏功能开发中'));
+    }
     this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
-    
+
     if (this.likeBtn) {
       this.likeBtn.addEventListener('click', () => this.handleLike());
     }
-    
+
     if (this.commentSubmitBtn) {
       this.commentSubmitBtn.addEventListener('click', () => this.handleCommentSubmit());
     }
-    
+
     if (this.commentInput) {
       this.commentInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -349,9 +346,12 @@ class PostDetailPage {
   }
 
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    setTimeout(() => this.hideSnackbar(), 5000);
+    this.snackbarTimer = setTimeout(() => this.hideSnackbar(), 5000);
   }
 
   hideSnackbar() {
@@ -359,7 +359,11 @@ class PostDetailPage {
   }
 
   goBack() {
-    window.history.back();
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = 'home.html';
+    }
   }
 }
 

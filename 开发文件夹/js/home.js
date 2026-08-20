@@ -7,6 +7,7 @@ import { RightSidebarComponent } from '../components/right-sidebar.js';
 class HomePage {
   constructor() {
     this.currentUser = null;
+    this.currentCategoryId = null;
     
     this.header = null;
     this.feed = null;
@@ -16,18 +17,18 @@ class HomePage {
     this.snackbar = document.getElementById('snackbar');
     this.snackbarLabel = document.getElementById('snackbarLabel');
     this.snackbarAction = document.getElementById('snackbarAction');
-    
+
+    this.snackbarTimer = null;
+
     this.init();
   }
   
   async init() {
     try {
-      await this.checkSession();
       await this.getCurrentUser();
       await this.initComponents();
       this.bindEvents();
     } catch (error) {
-      console.error('Home init error:', error);
       this.showSnackbar('页面加载失败');
     }
   }
@@ -50,6 +51,7 @@ class HomePage {
   async initComponents() {
     this.header = new HeaderComponent({
       onMenuClick: () => this.sidebar.open(),
+      onCategoryChange: (categoryId) => this.handleCategoryChange(categoryId),
       onSearch: (keyword) => this.handleSearch(keyword)
     });
     
@@ -57,9 +59,17 @@ class HomePage {
       pageSize: 10
     });
     
-    this.sidebar = new SidebarComponent();
+    this.sidebar = new SidebarComponent({
+      onCategoryChange: (categoryId) => this.handleCategoryChange(categoryId)
+    });
     
     this.rightSidebar = new RightSidebarComponent();
+  }
+  
+  handleCategoryChange(categoryId) {
+    this.currentCategoryId = categoryId;
+    this.header.setActiveCategory(categoryId);
+    this.feed.loadPosts(1, categoryId);
   }
   
   handleSearch(keyword) {
@@ -67,52 +77,19 @@ class HomePage {
   }
   
   bindEvents() {
-    this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
-    this.initScrollBehavior();
-  }
-  
-  initScrollBehavior() {
-    const header = document.querySelector('.home-header');
-    const mainContent = document.querySelector('.home-page main');
-    
-    const setHeaderHeight = () => {
-      const headerHeight = header.offsetHeight;
-      mainContent.style.paddingTop = headerHeight + 'px';
-    };
-    
-    setHeaderHeight();
-    window.addEventListener('resize', setHeaderHeight);
-    
-    let lastScrollY = window.scrollY;
-    let ticking = false;
-    
-    const updateHeader = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - lastScrollY;
-      
-      if (scrollDelta > 10 && currentScrollY > 100) {
-        header.classList.add('hidden');
-      } else if (scrollDelta < -10) {
-        header.classList.remove('hidden');
-      }
-      
-      lastScrollY = currentScrollY;
-      ticking = false;
-    };
-    
-    window.addEventListener('scroll', () => {
-      if (!ticking) {
-        requestAnimationFrame(updateHeader);
-        ticking = true;
-      }
-    }, { passive: true });
+    if (this.snackbarAction) {
+      this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    }
   }
   
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    
-    setTimeout(() => {
+
+    this.snackbarTimer = setTimeout(() => {
       this.hideSnackbar();
     }, 5000);
   }

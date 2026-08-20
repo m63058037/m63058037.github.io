@@ -14,7 +14,7 @@ const LOG_TYPE = {
   SYSTEM: 'system'
 };
 
-const currentLogLevel = LOG_LEVELS.DEBUG;
+const currentLogLevel = LOG_LEVELS.ERROR;
 
 function shouldLog(level) {
   return level >= currentLogLevel;

@@ -4,13 +4,16 @@ export class FeedComponent {
   constructor(options = {}) {
     this.pageSize = options.pageSize || 10;
     this.currentPage = 1;
+    this.currentCategoryId = null;
     this.posts = [];
     
     this.postsLoading = document.getElementById('postsLoading');
     this.postsList = document.getElementById('postsList');
     this.noPosts = document.getElementById('noPosts');
     this.pagination = document.getElementById('pagination');
-    
+
+    this.snackbarTimer = null;
+
     this.init();
   }
   
@@ -18,34 +21,38 @@ export class FeedComponent {
     await this.loadPosts();
   }
   
-  async loadPosts(page = 1) {
+  async loadPosts(page = 1, categoryId = null) {
     this.currentPage = page;
+    this.currentCategoryId = categoryId;
     
     this.showLoading(true);
     this.noPosts.style.display = 'none';
     this.postsList.innerHTML = '';
     
     try {
-      const response = await postService.getPosts(this.currentPage, this.pageSize);
-      
+      const response = await postService.getPosts(this.currentPage, this.pageSize, this.currentCategoryId);
+
       if (!response.success) {
-        console.warn('Failed to load posts:', response.message);
         this.showEmptyState();
         return;
       }
-      
+
+      if (!response.data) {
+        this.showEmptyState();
+        return;
+      }
+
       const { posts, pagination } = response.data;
       this.posts = posts;
-      
-      if (posts.length === 0) {
+
+      if (!posts || posts.length === 0) {
         this.showEmptyState();
         return;
       }
-      
+
       this.renderPosts(posts);
       this.renderPagination(pagination);
     } catch (error) {
-      console.error('Feed loadPosts error:', error);
       this.showEmptyState();
     } finally {
       this.showLoading(false);
@@ -94,7 +101,7 @@ export class FeedComponent {
         <a href="post-detail.html?id=${post.id}">${post.title}</a>
       </h2>
 
-      <p class="post-excerpt">${post.excerpt || post.content.substring(0, 200)}</p>
+      <p class="post-excerpt">${post.excerpt || post.content?.substring(0, 200) || '暂无内容'}</p>
 
       ${imagePreview}
 
@@ -109,19 +116,19 @@ export class FeedComponent {
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
               <circle cx="12" cy="12" r="3"/>
             </svg>
-            ${post.views_count}
+            ${post.views_count || 0}
           </span>
           <span class="stat">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
             </svg>
-            ${post.likes_count}
+            ${post.likes_count || 0}
           </span>
           <span class="stat">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
             </svg>
-            ${post.comments_count}
+            ${post.comments_count || 0}
           </span>
         </div>
       </div>
@@ -133,12 +140,13 @@ export class FeedComponent {
   createImagePreview(images) {
     const previewCount = Math.min(images.length, 3);
     const hasMore = images.length > 3;
+    const containerClass = previewCount === 1 ? 'post-images single' : 'post-images';
     
     return `
-      <div class="post-images">
+      <div class="${containerClass}">
         ${images.slice(0, previewCount).map((img, index) => `
-          <div class="post-image-wrapper ${previewCount === 1 ? 'single' : ''}">
-            <img src="${img.image_url}" alt="帖子图片${index + 1}" class="post-image" />
+          <div class="post-image-wrapper">
+            <img src="${img.url || img.image_url || ''}" alt="帖子图片${index + 1}" class="post-image" loading="lazy" onerror="this.style.display='none';" />
           </div>
         `).join('')}
         ${hasMore ? `<div class="post-image-more">+${images.length - 3}</div>` : ''}
@@ -204,7 +212,7 @@ export class FeedComponent {
       btn.addEventListener('click', () => {
         const page = parseInt(btn.dataset.page);
         if (page && page !== this.currentPage && !btn.classList.contains('disabled')) {
-          this.loadPosts(page);
+          this.loadPosts(page, this.currentCategoryId);
         }
       });
     });
@@ -223,9 +231,24 @@ export class FeedComponent {
   showEmptyState() {
     this.noPosts.style.display = 'flex';
   }
-  
+
+  showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
+    const snackbar = document.getElementById('snackbar');
+    const snackbarLabel = document.getElementById('snackbarLabel');
+    if (snackbar && snackbarLabel) {
+      snackbarLabel.textContent = message;
+      snackbar.classList.add('show');
+      this.snackbarTimer = setTimeout(() => {
+        snackbar.classList.remove('show');
+      }, 5000);
+    }
+  }
+
   refresh() {
-    this.loadPosts(1);
+    this.loadPosts(1, this.currentCategoryId);
   }
 }
 

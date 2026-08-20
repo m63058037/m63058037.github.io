@@ -61,13 +61,11 @@ export const apiService = {
       const { data, error } = await query;
       
       if (error) {
-        console.error('API query error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, data, '', 200);
     } catch (error) {
-      console.error('API query exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -87,13 +85,11 @@ export const apiService = {
         .select(returning ? '*' : null);
       
       if (error) {
-        console.error('API insert error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, result, '', 201);
     } catch (error) {
-      console.error('API insert exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -123,13 +119,11 @@ export const apiService = {
       const { data: result, error } = await query.select(returning ? '*' : null);
       
       if (error) {
-        console.error('API update error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, result, '', 200);
     } catch (error) {
-      console.error('API update exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -158,13 +152,11 @@ export const apiService = {
       const { data: result, error } = await query.select(returning ? '*' : null);
       
       if (error) {
-        console.error('API delete error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, result, '', 200);
     } catch (error) {
-      console.error('API delete exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -188,13 +180,11 @@ export const apiService = {
         if (error.code === 'PGRST116') {
           return createResponse(true, null, '', 404);
         }
-        console.error('API findOne error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, data, '', 200);
     } catch (error) {
-      console.error('API findOne exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -235,7 +225,6 @@ export const apiService = {
       const { data, count, error } = await query;
       
       if (error) {
-        console.error('API paginate error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
@@ -251,7 +240,6 @@ export const apiService = {
         }
       }, '', 200);
     } catch (error) {
-      console.error('API paginate exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -267,13 +255,11 @@ export const apiService = {
       const { data, error } = await supabase.rpc(functionName, params);
       
       if (error) {
-        console.error('API rpc error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, data, '', 200);
     } catch (error) {
-      console.error('API rpc exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -292,13 +278,11 @@ export const apiService = {
         .select();
       
       if (error) {
-        console.error('API bulkInsert error:', error);
         return createResponse(false, null, error.message, error.status || 500);
       }
       
       return createResponse(true, result, '', 201);
     } catch (error) {
-      console.error('API bulkInsert exception:', error);
       return createResponse(false, null, error.message, 500);
     }
   },
@@ -313,7 +297,6 @@ export const apiService = {
       const result = await callback(supabase);
       return createResponse(true, result, '', 200);
     } catch (error) {
-      console.error('API transaction error:', error);
       return createResponse(false, null, error.message, 500);
     }
   },

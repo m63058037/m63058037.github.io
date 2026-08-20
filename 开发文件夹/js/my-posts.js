@@ -18,6 +18,8 @@ class MyPostsPage {
     this.snackbarLabel = document.getElementById('snackbarLabel');
     this.snackbarAction = document.getElementById('snackbarAction');
 
+    this.snackbarTimer = null;
+
     this.init();
   }
 
@@ -28,7 +30,6 @@ class MyPostsPage {
       await this.loadPosts();
       this.bindEvents();
     } catch (error) {
-      console.error('My posts init error:', error);
       this.showSnackbar('加载失败');
     }
   }
@@ -55,32 +56,41 @@ class MyPostsPage {
     this.noPosts.style.display = 'none';
     this.postsList.innerHTML = '';
 
-    const response = await postService.getUserPosts(
-      this.currentUser.id,
-      this.currentPage,
-      this.pageSize
-    );
+    try {
+      const response = await postService.getUserPosts(
+        this.currentUser.id,
+        this.currentPage,
+        this.pageSize
+      );
 
-    this.showLoading(false);
+      if (!response.success) {
+        this.showSnackbar('加载失败');
+        return;
+      }
 
-    if (!response.success) {
+      if (!response.data) {
+        this.showSnackbar('加载失败');
+        return;
+      }
+
+      const { data, pagination } = response.data;
+
+      if (!data || data.length === 0) {
+        this.noPosts.style.display = 'flex';
+        return;
+      }
+
+      data.forEach(post => {
+        const postElement = this.createPostElement(post);
+        this.postsList.appendChild(postElement);
+      });
+
+      this.renderPagination(pagination);
+    } catch (error) {
       this.showSnackbar('加载失败');
-      return;
+    } finally {
+      this.showLoading(false);
     }
-
-    const { data, pagination } = response.data;
-
-    if (data.length === 0) {
-      this.noPosts.style.display = 'flex';
-      return;
-    }
-
-    data.forEach(post => {
-      const postElement = this.createPostElement(post);
-      this.postsList.appendChild(postElement);
-    });
-
-    this.renderPagination(pagination);
   }
 
   createPostElement(post) {
@@ -102,7 +112,7 @@ class MyPostsPage {
         <div class="post-badges">${pinnedBadge}</div>
       </div>
       <h2 class="post-title"><a href="post-detail.html?id=${post.id}">${post.title}</a></h2>
-      <p class="post-excerpt">${post.excerpt}</p>
+      <p class="post-excerpt">${post.excerpt || post.content?.substring(0, 200) || ''}</p>
       <div class="post-footer">
         <div class="post-meta">
           ${post.tags && post.tags.length > 0 ? 
@@ -113,19 +123,19 @@ class MyPostsPage {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
             </svg>
-            ${post.views_count}
+            ${post.views_count || 0}
           </span>
           <span class="stat">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
             </svg>
-            ${post.likes_count}
+            ${post.likes_count || 0}
           </span>
           <span class="stat">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
             </svg>
-            ${post.comments_count}
+            ${post.comments_count || 0}
           </span>
         </div>
       </div>
@@ -174,7 +184,11 @@ class MyPostsPage {
         const page = parseInt(btn.dataset.page);
         if (page && page !== this.currentPage && !btn.classList.contains('disabled')) {
           this.currentPage = page;
-          this.loadPosts();
+          try {
+            this.loadPosts();
+          } catch (error) {
+            this.showSnackbar('加载失败');
+          }
         }
       });
     });
@@ -200,15 +214,21 @@ class MyPostsPage {
         tab.classList.add('active');
         this.currentTab = tab.dataset.tab;
         this.currentPage = 1;
+        if (this.currentTab !== 'all') {
+          this.showSnackbar('该筛选功能开发中，当前显示全部帖子');
+        }
         this.loadPosts();
       });
     });
   }
 
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    setTimeout(() => this.hideSnackbar(), 5000);
+    this.snackbarTimer = setTimeout(() => this.hideSnackbar(), 5000);
   }
 
   hideSnackbar() {

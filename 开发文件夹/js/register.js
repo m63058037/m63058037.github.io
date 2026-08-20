@@ -20,6 +20,8 @@ class RegisterPage {
     this.confirmPasswordError = document.getElementById('confirmPasswordError');
     this.nicknameError = document.getElementById('nicknameError');
     this.termsError = document.getElementById('termsError');
+    this.userAgreementLink = document.getElementById('userAgreementLink');
+    this.privacyPolicyLink = document.getElementById('privacyPolicyLink');
     
     this.strengthSegments = [
       document.getElementById('strength1'),
@@ -28,6 +30,8 @@ class RegisterPage {
       document.getElementById('strength4')
     ];
     this.strengthText = document.getElementById('strengthText');
+
+    this.snackbarTimer = null;
 
     this.init();
   }
@@ -39,7 +43,6 @@ class RegisterPage {
       this.renderPage();
       this.bindEvents();
     } catch (error) {
-      console.error('Register init error:', error);
     }
   }
 
@@ -87,7 +90,19 @@ class RegisterPage {
     this.passwordToggle.addEventListener('click', () => this.togglePassword(this.passwordInput, this.passwordToggle));
     this.confirmPasswordToggle.addEventListener('click', () => this.togglePassword(this.confirmPasswordInput, this.confirmPasswordToggle));
     
-    this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    if (this.snackbarAction) {
+      this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    }
+
+    this.userAgreementLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showSnackbar('用户协议页面开发中');
+    });
+
+    this.privacyPolicyLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showSnackbar('隐私政策页面开发中');
+    });
 
     this.uidInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -253,6 +268,7 @@ class RegisterPage {
     }
     
     this.setLoading(true);
+    let shouldKeepLoading = false;
     
     try {
       const uid = this.uidInput.value.trim();
@@ -262,7 +278,8 @@ class RegisterPage {
       const response = await authService.register(uid, password, nickname);
       
       if (response.success) {
-        this.showSuccessSnackbar('注册成功！');
+        shouldKeepLoading = true;
+        this.showSuccessSnackbar('注册成功！即将跳转到登录页面...');
         setTimeout(() => {
           window.location.href = 'login.html';
         }, 2000);
@@ -271,10 +288,11 @@ class RegisterPage {
         this.showSnackbar(errorMessage);
       }
     } catch (error) {
-      console.error('Register error:', error);
       this.showSnackbar('网络异常，请稍后重试');
     } finally {
-      this.setLoading(false);
+      if (!shouldKeepLoading) {
+        this.setLoading(false);
+      }
     }
   }
 
@@ -296,6 +314,7 @@ class RegisterPage {
     input.type = type;
     
     const icon = toggleButton.querySelector('.toggle-icon');
+    if (!icon) return;
     if (type === 'password') {
       icon.innerHTML = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
     } else {
@@ -324,17 +343,26 @@ class RegisterPage {
   }
 
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    
-    setTimeout(() => {
+
+    this.snackbarTimer = setTimeout(() => {
       this.hideSnackbar();
     }, 5000);
   }
 
   showSuccessSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
+    this.snackbarTimer = setTimeout(() => {
+      this.hideSnackbar();
+    }, 2000);
   }
 
   hideSnackbar() {

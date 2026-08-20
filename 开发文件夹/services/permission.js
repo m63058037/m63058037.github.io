@@ -168,7 +168,6 @@ export const permissionService = {
       
       return permissions.includes(permission);
     } catch (error) {
-      console.error('Permission hasPermission error:', error);
       return false;
     }
   },
@@ -182,7 +181,6 @@ export const permissionService = {
       }
       return false;
     } catch (error) {
-      console.error('Permission hasAnyPermission error:', error);
       return false;
     }
   },
@@ -196,7 +194,6 @@ export const permissionService = {
       }
       return true;
     } catch (error) {
-      console.error('Permission hasAllPermissions error:', error);
       return false;
     }
   },
@@ -217,7 +214,6 @@ export const permissionService = {
       
       return await authService.isModerator() || await authService.isAdmin();
     } catch (error) {
-      console.error('Permission canEditPost error:', error);
       return false;
     }
   },
@@ -226,7 +222,6 @@ export const permissionService = {
     try {
       return await this.canEditPost(postUserId);
     } catch (error) {
-      console.error('Permission canDeletePost error:', error);
       return false;
     }
   },
@@ -247,7 +242,6 @@ export const permissionService = {
       
       return await authService.isModerator() || await authService.isAdmin();
     } catch (error) {
-      console.error('Permission canEditComment error:', error);
       return false;
     }
   },
@@ -256,7 +250,6 @@ export const permissionService = {
     try {
       return await this.canEditComment(commentUserId);
     } catch (error) {
-      console.error('Permission canDeleteComment error:', error);
       return false;
     }
   },
@@ -265,7 +258,6 @@ export const permissionService = {
     try {
       return await authService.isAdmin();
     } catch (error) {
-      console.error('Permission isAdminOrAbove error:', error);
       return false;
     }
   },
@@ -274,7 +266,6 @@ export const permissionService = {
     try {
       return await authService.isModerator() || await authService.isAdmin();
     } catch (error) {
-      console.error('Permission isModeratorOrAbove error:', error);
       return false;
     }
   },
@@ -283,7 +274,6 @@ export const permissionService = {
     try {
       return await this.hasPermission(PERMISSIONS.VIEW_ADMIN);
     } catch (error) {
-      console.error('Permission canAccessAdminPanel error:', error);
       return false;
     }
   },
@@ -301,7 +291,6 @@ export const permissionService = {
       
       return ROLE_PERMISSIONS[role] || [];
     } catch (error) {
-      console.error('Permission getCurrentUserPermissions error:', error);
       return [];
     }
   },
@@ -317,7 +306,6 @@ export const permissionService = {
       const user = userResponse.data;
       return user.role || UserRoles.USER;
     } catch (error) {
-      console.error('Permission getCurrentUserRole error:', error);
       return UserRoles.GUEST;
     }
   },
@@ -326,7 +314,6 @@ export const permissionService = {
     try {
       return await authService.isSuperAdmin();
     } catch (error) {
-      console.error('Permission isSuperAdmin error:', error);
       return false;
     }
   }

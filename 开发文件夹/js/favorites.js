@@ -15,6 +15,8 @@ class FavoritesPage {
     this.snackbarLabel = document.getElementById('snackbarLabel');
     this.snackbarAction = document.getElementById('snackbarAction');
 
+    this.snackbarTimer = null;
+
     this.init();
   }
 
@@ -24,7 +26,6 @@ class FavoritesPage {
       await this.loadFavorites();
       this.bindEvents();
     } catch (error) {
-      console.error('Favorites init error:', error);
       this.showSnackbar('加载失败');
     }
   }
@@ -42,10 +43,17 @@ class FavoritesPage {
     this.noPosts.style.display = 'none';
     this.postsList.innerHTML = '';
 
-    setTimeout(() => {
-      this.showLoading(false);
+    this.showLoading(false);
+    if (this.noPosts) {
       this.noPosts.style.display = 'flex';
-    }, 500);
+      const noPostsP = this.noPosts.querySelector('p');
+      if (noPostsP) {
+        noPostsP.textContent = '收藏功能开发中';
+      } else {
+        this.noPosts.innerHTML = '<p>收藏功能开发中</p>';
+      }
+    }
+    this.showSnackbar('收藏功能开发中');
   }
 
   showLoading(isLoading) {
@@ -59,14 +67,21 @@ class FavoritesPage {
   }
 
   bindEvents() {
-    this.backButton.addEventListener('click', () => this.goBack());
-    this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    if (this.backButton) {
+      this.backButton.addEventListener('click', () => this.goBack());
+    }
+    if (this.snackbarAction) {
+      this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
+    }
   }
 
   showSnackbar(message) {
+    if (this.snackbarTimer) {
+      clearTimeout(this.snackbarTimer);
+    }
     this.snackbarLabel.textContent = message;
     this.snackbar.classList.add('show');
-    setTimeout(() => this.hideSnackbar(), 5000);
+    this.snackbarTimer = setTimeout(() => this.hideSnackbar(), 5000);
   }
 
   hideSnackbar() {
