@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园论坛 - 用户资料</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=20260822a">
+</head>
+<body class="user-profile-page">
+  <header class="simple-header">
+    <button class="back-button" id="backButton">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+      </svg>
+      <span>返回</span>
+    </button>
+    <h1 class="page-title">用户资料</h1>
+    <div class="header-actions"></div>
+  </header>
+
+  <main class="user-profile-page">
+    <div class="profile-card">
+      <div class="profile-avatar">
+        <img id="profileAvatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="用户头像" />
+      </div>
+      <div class="profile-name" id="profileName">加载中...</div>
+      <div class="profile-meta" id="profileMeta">
+        <span class="profile-meta-item" id="metaCampus"></span>
+        <span class="profile-meta-item" id="metaGrade"></span>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat-item">
+          <span class="profile-stat-value" id="postCount">0</span>
+          <span class="profile-stat-label">发帖</span>
+        </div>
+      </div>
+      <div class="profile-private-info" id="profilePrivateInfo" style="display: none;">
+        <h3 class="profile-private-title">账号信息</h3>
+        <div class="profile-private-list">
+          <div class="profile-private-row">
+            <span class="profile-private-label">UID</span>
+            <span class="profile-private-value" id="privateUid">-</span>
+          </div>
+          <div class="profile-private-row">
+            <span class="profile-private-label">学号</span>
+            <span class="profile-private-value" id="privateStudentId">-</span>
+          </div>
+          <div class="profile-private-row">
+            <span class="profile-private-label">账号状态</span>
+            <span class="profile-private-value" id="privateAccountStatus">-</span>
+          </div>
+          <div class="profile-private-row" id="privateRoleRow" style="display: none;">
+            <span class="profile-private-label">角色</span>
+            <span class="profile-private-value" id="privateRole">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="snackbar-container" id="snackbarContainer">
+    <div class="md3-snackbar" id="snackbar">
+      <div class="md3-snackbar-surface">
+        <div class="md3-snackbar-row">
+          <svg class="md3-snackbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="md3-snackbar-label" id="snackbarLabel"></span>
+        </div>
+        <button class="md3-snackbar-action" id="snackbarAction" type="button">
+          <span class="md3-snackbar-action-label">关闭</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/user-profile.js?v=20260822a"></script>
+</body>
+</html>

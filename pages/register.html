@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园论坛 - 注册</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=20260822a">
+</head>
+<body class="register-page">
+  <div class="register-container">
+    <div class="register-card">
+      <div class="register-header">
+        <div class="logo-wrapper">
+          <svg class="logo" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="20" fill="url(#logoGradient)"/>
+            <path d="M16 20h4v8h-4v-8zm8 0h4v8h-4v-8zm8 0h4v8h-4v-8zM14 34h20v-2H14v2z" fill="white"/>
+            <defs>
+              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#673ab7"/>
+                <stop offset="100%" style="stop-color:#3f51b5"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="register-title">校园论坛</h1>
+        <p class="register-subtitle">创建账号，开始你的校园之旅</p>
+      </div>
+
+      <form class="register-form" id="registerForm" novalidate>
+        <div class="form-field">
+          <label class="form-label">学生身份</label>
+          <div class="radio-group" id="studentTypeGroup">
+            <label class="radio-option">
+              <input type="radio" name="studentType" value="school" checked>
+              <span class="radio-label">本校学生</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="studentType" value="external">
+              <span class="radio-label">外校学生</span>
+            </label>
+          </div>
+          <span class="form-error" id="studentTypeError"></span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="branch">所属分校</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+            </svg>
+            <select id="branch" class="form-input form-select" required>
+              <option value="">请选择所属分校</option>
+            </select>
+          </div>
+          <span class="form-error" id="branchError"></span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="grade">年级</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+            </svg>
+            <select id="grade" class="form-input form-select" required>
+              <option value="">请选择年级</option>
+              <option value="初一">初一</option>
+              <option value="初二">初二</option>
+              <option value="初三">初三</option>
+              <option value="高中及以上">高中及以上</option>
+            </select>
+          </div>
+          <span class="form-error" id="gradeError"></span>
+        </div>
+
+        <div class="form-field" id="cohortField">
+          <label class="form-label" for="cohort">届次</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+            </svg>
+            <input type="text" id="cohort" class="form-input" placeholder="选择年级后自动计算" readonly disabled />
+          </div>
+          <span class="form-hint" id="cohortHint"></span>
+        </div>
+
+        <div class="form-field" id="classField" style="display: none;">
+          <label class="form-label" for="classNumber">班级</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <select id="classNumber" class="form-input form-select">
+              <option value="">请选择班级</option>
+            </select>
+          </div>
+          <span class="form-error" id="classNumberError"></span>
+        </div>
+
+        <div class="form-field" id="studentNumberField" style="display: none;">
+          <label class="form-label" for="studentNumberInput">学号</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z"/>
+            </svg>
+            <select id="studentNumberInput" class="form-input form-select">
+              <option value="">请选择学号</option>
+            </select>
+          </div>
+          <span class="form-error" id="studentNumberError"></span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="nickname">名称</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <input
+              type="text"
+              id="nickname"
+              class="form-input"
+              placeholder="名称（其他用户看到你的名字）"
+              required
+              autocomplete="nickname"
+            />
+            <span class="input-validation-icon"></span>
+          </div>
+          <span class="form-error" id="nicknameError"></span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="password">密码</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+            <input
+              type="password"
+              id="password"
+              class="form-input"
+              placeholder="请输入密码"
+              required
+              autocomplete="new-password"
+            />
+            <button type="button" class="password-toggle" id="passwordToggle" aria-label="切换密码可见性">
+              <svg class="toggle-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+            </button>
+            <span class="input-validation-icon"></span>
+          </div>
+          <div class="password-strength" id="passwordStrength">
+            <div class="strength-bar">
+              <div class="strength-segment" id="strength1"></div>
+              <div class="strength-segment" id="strength2"></div>
+              <div class="strength-segment" id="strength3"></div>
+              <div class="strength-segment" id="strength4"></div>
+            </div>
+            <span class="strength-text" id="strengthText"></span>
+          </div>
+          <span class="form-error" id="passwordError"></span>
+          <span class="form-hint">至少2个英文字母 + 至少6个数字</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="confirmPassword">确认密码</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+            <input
+              type="password"
+              id="confirmPassword"
+              class="form-input"
+              placeholder="请再次输入密码"
+              required
+              autocomplete="new-password"
+            />
+            <button type="button" class="password-toggle" id="confirmPasswordToggle" aria-label="切换密码可见性">
+              <svg class="toggle-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+            </button>
+            <span class="input-validation-icon"></span>
+          </div>
+          <span class="form-error" id="confirmPasswordError"></span>
+        </div>
+
+        <label class="checkbox-wrapper terms-checkbox">
+          <input type="checkbox" id="agreeTerms" class="checkbox-input" required>
+          <span class="checkbox-custom"></span>
+          <span class="checkbox-label">
+            我已阅读并同意
+            <a href="javascript:void(0)" class="link-primary" id="userAgreementLink">用户协议</a>
+            和
+            <a href="javascript:void(0)" class="link-primary" id="privacyPolicyLink">隐私政策</a>
+          </span>
+        </label>
+        <span class="form-error terms-error" id="termsError"></span>
+
+        <button type="submit" class="register-button" id="registerButton">
+          <span class="button-text">注册</span>
+          <div class="button-loader" id="buttonLoader">
+            <svg viewBox="25 25 50 50">
+              <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100" class="loader-spinner"/>
+            </svg>
+          </div>
+        </button>
+      </form>
+
+      <div class="register-footer">
+        <p class="login-link">
+          已有账号？
+          <a href="login.html" class="link-primary">立即登录</a>
+        </p>
+      </div>
+
+      <div class="snackbar-container" id="snackbarContainer">
+        <div class="md3-snackbar" id="snackbar">
+          <div class="md3-snackbar-surface">
+            <div class="md3-snackbar-row">
+              <svg class="md3-snackbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span class="md3-snackbar-label" id="snackbarLabel"></span>
+            </div>
+            <button class="md3-snackbar-action" id="snackbarAction" type="button">
+              <span class="md3-snackbar-action-label">关闭</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="register-decoration">
+      <div class="decoration-circle circle-1"></div>
+      <div class="decoration-circle circle-2"></div>
+      <div class="decoration-circle circle-3"></div>
+    </div>
+  </div>
+
+  <div class="uid-result-modal" id="uidResultModal" style="display: none;">
+    <div class="uid-result-overlay"></div>
+    <div class="uid-result-content">
+      <div class="uid-result-header">
+        <svg class="uid-result-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h3>注册成功</h3>
+      </div>
+      <div class="uid-result-body">
+        <p class="uid-result-desc">你的 UID 是：</p>
+        <div class="uid-display" id="uidDisplay"></div>
+        <p class="uid-result-warning">UID 将用于以后登录，请妥善保存。</p>
+      </div>
+      <div class="uid-result-footer">
+        <button type="button" class="uid-result-btn" id="uidResultConfirm">
+          <span class="button-text">我已记好，前往登录</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="duplicate-identity-modal" id="duplicateIdentityModal" style="display: none;">
+    <div class="duplicate-identity-overlay"></div>
+    <div class="duplicate-identity-content">
+      <div class="duplicate-identity-header">
+        <h3>身份信息提醒</h3>
+      </div>
+      <div class="duplicate-identity-body">
+        <p class="duplicate-identity-desc">该身份信息已经注册过账号，请确认是否为本人。</p>
+      </div>
+      <div class="duplicate-identity-footer">
+        <button type="button" class="duplicate-identity-btn duplicate-btn-cancel" id="duplicateCancel">
+          <span class="button-text">否，不是我</span>
+        </button>
+        <button type="button" class="duplicate-identity-btn duplicate-btn-confirm" id="duplicateConfirm">
+          <span class="button-text">是，我本人</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/register.js?v=20260821h"></script>
+</body>
+</html>
