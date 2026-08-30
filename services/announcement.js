@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { sensitiveWordService } from './sensitive-word.js';
 
 export const announcementService = {
   /**
@@ -68,6 +69,11 @@ export const announcementService = {
    */
   async adminCreate(title, content, publish = false) {
     try {
+      const blockTitle = await sensitiveWordService.verify(title);
+      if (blockTitle) return { success: false, error: blockTitle.message };
+      const blockContent = await sensitiveWordService.verify(content);
+      if (blockContent) return { success: false, error: blockContent.message };
+
       const response = await api.rpc('admin_create_announcement', {
         p_title: title,
         p_content: content,
@@ -92,6 +98,11 @@ export const announcementService = {
    */
   async adminUpdate(id, title, content) {
     try {
+      const blockTitle = await sensitiveWordService.verify(title);
+      if (blockTitle) return { success: false, error: blockTitle.message };
+      const blockContent = await sensitiveWordService.verify(content);
+      if (blockContent) return { success: false, error: blockContent.message };
+
       const response = await api.rpc('admin_update_announcement', {
         p_id: id,
         p_title: title,

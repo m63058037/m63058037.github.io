@@ -44,6 +44,7 @@ class SearchPage {
 
       this.setupInfiniteScroll();
       this.bindEvents();
+      this.initLottieIcons();
     } catch (error) {
       this.showSnackbar('加载失败');
     }
@@ -105,21 +106,16 @@ class SearchPage {
       );
 
       if (!response.success) {
+        // 错误状态：显示错误信息，不显示空状态
         this.showSnackbar(response.error || '搜索失败');
-        if (isInitial) {
-          this.showEmptyState();
-        }
+        this.resultsList.style.display = 'none';
+        this.noResults.style.display = 'none';
         return;
       }
 
       const result = response.data;
       const posts = this.extractPosts(result);
       const hasMore = this.extractHasMore(result, posts.length);
-
-      if (isInitial && (!posts || posts.length === 0)) {
-        this.showEmptyState();
-        return;
-      }
 
       // 适配数据格式
       const adaptedPosts = posts.map(post => this.adaptPostFormat(post));
@@ -140,10 +136,10 @@ class SearchPage {
         this.showNoMore();
       }
     } catch (error) {
+      // 网络错误或其他异常
       this.showSnackbar('搜索失败，请检查网络连接');
-      if (isInitial) {
-        this.showEmptyState();
-      }
+      this.resultsList.style.display = 'none';
+      this.noResults.style.display = 'none';
     } finally {
       this.isLoading = false;
       if (isInitial) {
@@ -344,11 +340,25 @@ class SearchPage {
 
   showLoading(isLoading) {
     if (isLoading) {
+      // 搜索中状态：只显示loading，隐藏结果和空状态
       this.searchLoading.style.display = 'flex';
       this.resultsList.style.display = 'none';
+      this.noResults.classList.remove('show');
     } else {
+      // 搜索完成：隐藏loading，根据结果显示结果或空状态
       this.searchLoading.style.display = 'none';
-      this.resultsList.style.display = 'block';
+      if (this.posts.length > 0) {
+        this.resultsList.style.display = 'block';
+        this.noResults.classList.remove('show');
+      } else {
+        this.resultsList.style.display = 'none';
+        // 只有在确实没有结果时才显示空状态
+        if (this.keyword && !this.isLoading) {
+          this.showEmptyState();
+        } else {
+          this.noResults.classList.remove('show');
+        }
+      }
     }
   }
 
@@ -395,7 +405,13 @@ class SearchPage {
   }
 
   showEmptyState() {
-    this.noResults.style.display = 'flex';
+    // 只在确实没有搜索结果时显示空状态
+    if (this.posts.length === 0 && !this.isLoading) {
+      this.noResults.classList.add('show');
+      this.resultsList.style.display = 'none';
+    } else {
+      this.noResults.classList.remove('show');
+    }
   }
 
   bindEvents() {
@@ -433,17 +449,26 @@ class SearchPage {
     url.searchParams.set('branch', this.branch);
     window.history.replaceState({}, '', url);
 
-    // 重置并搜索
+    // 重置状态
     this.keyword = keyword;
     this.currentPage = 1;
     this.posts = [];
     this.hasMore = true;
+    this.isLoading = false;
+    
+    // 清空显示区域
     this.resultsList.innerHTML = '';
     this.noResults.style.display = 'none';
-
+    
+    // 清除"没有更多了"的提示
     const noMoreEl = document.getElementById('noMorePosts');
     if (noMoreEl) noMoreEl.style.display = 'none';
+    
+    // 清除"加载中"的提示
+    const loadingMoreEl = document.getElementById('loadingMore');
+    if (loadingMoreEl) loadingMoreEl.style.display = 'none';
 
+    // 开始搜索
     this.performSearch(true);
   }
 
@@ -465,6 +490,69 @@ class SearchPage {
       window.history.back();
     } else {
       window.location.href = 'home.html';
+    }
+  }
+
+  /**
+   * 初始化Lottie图标
+   * 替换页面中的静态SVG图标为Lottie动画图标
+   */
+  async initLottieIcons() {
+    try {
+      // 等待DOM完全渲染
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 定义图标替换配置
+      const iconReplacements = {
+        // 搜索图标
+        '.search-bar-inline .search-button svg': 'search',
+        '.back-button svg': 'arrowLeft',
+        
+        // 加载动画图标
+        '.search-loading svg': 'loading',
+        
+        // 无结果图标
+        '.no-results svg': 'search'
+      };
+
+      // 批量加载图标
+      const iconNames = [...new Set(Object.values(iconReplacements))];
+      await lottieIconUtils.loadIcons(iconNames);
+
+      // 替换图标
+      Object.entries(iconReplacements).forEach(([selector, iconName]) => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          lottieIconUtils.loadIcon(iconName, { 
+            interactive: true,
+            width: '24px',
+            height: '24px'
+          }).then(iconElement => {
+            // 保留原有的类名和属性
+            const originalClasses = element.className;
+            const originalAttributes = {};
+            for (let attr of element.attributes) {
+              if (attr.name !== 'class') {
+                originalAttributes[attr.name] = attr.value;
+              }
+            }
+            
+            // 清空元素并添加新图标
+            element.innerHTML = '';
+            element.appendChild(iconElement);
+            
+            // 恢复原有的类名和属性
+            element.className = originalClasses;
+            Object.entries(originalAttributes).forEach(([name, value]) => {
+              element.setAttribute(name, value);
+            });
+          });
+        });
+      });
+
+      console.log('[SearchPage] Lottie图标初始化完成');
+    } catch (error) {
+      console.warn('[SearchPage] Lottie图标初始化失败:', error);
     }
   }
 }

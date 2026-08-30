@@ -2,12 +2,25 @@ import { authService } from '../services/auth.js';
 import { adminService } from '../services/admin.js';
 import { announcementService } from '../services/announcement.js';
 import { messageService } from '../services/message.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 const UserRoles = {
   GUEST: 'guest',
   MEMBER: 'member',
   ADMIN: 'admin',
   DEV_ADMIN: 'dev_admin'
+};
+
+// 与服务端 services/report.js 中 ReportTypes 枚举值保持一致的中文标签
+// 键为短信/提交端真实存储的 report_type 值，而非旧版错误键名（spam/harassment/inappropriate/other）
+const REPORT_TYPE_LABELS = {
+  advertising: '广告行为',
+  harassment: '存在骚扰行为',
+  trading: '存在交易行为',
+  abuse: '辱骂行为',
+  not_student: '该用户疑似不是我校学生',
+  other: '其他'
 };
 
 class AdminPage {
@@ -93,20 +106,36 @@ class AdminPage {
     }, 1500);
   }
 
+  /** 敏感词前端预检（公告标题/正文）：命中则弹全屏警告并拒绝提交 */
+  precheckAnnouncement(title, content) {
+    if (sensitiveWordService.check(title).level > 0 || sensitiveWordService.check(content).level > 0) {
+      showContentWarnDialog();
+      return true;
+    }
+    return false;
+  }
+
   /**
    * 根据角色设置侧边栏可见性
    */
   setupSidebarVisibility() {
-    if (this.userRole !== UserRoles.DEV_ADMIN) {
-      if (this.announcementsNavItem) {
-        this.announcementsNavItem.style.display = 'none';
+    const isDevAdmin = this.userRole === UserRoles.DEV_ADMIN;
+    // 对普通管理员隐藏「公告管理」整个分组（含 header + nav-item），
+    // 避免仅隐藏 header 导致 nav-item 悬浮显示。不用 :has()（兼容性不稳）。
+    this.navItems.forEach(item => {
+      if (item.dataset.section === 'announcements' && !isDevAdmin) {
+        item.style.display = 'none';
       }
-      // 隐藏公告分组的 header（普通管理员不可见）
-      const announcementGroup = document.querySelector('.accordion-group:has(.nav-item[data-section="announcements"])');
-      if (announcementGroup && typeof announcementGroup.querySelector !== 'undefined') {
-        const header = announcementGroup.querySelector('.accordion-header');
-        if (header) header.style.display = 'none';
-      }
+    });
+    if (!isDevAdmin) {
+      this.accordionHeaders.forEach(header => {
+        if (header.dataset.accordion === 'announcement-group') {
+          header.style.display = 'none';
+          // 隐藏分组后折叠其 body，避免空白分组占位
+          const body = this.sidebar.querySelector('.accordion-body[data-accordion-body="announcement-group"]');
+          if (body) body.style.display = 'none';
+        }
+      });
     }
   }
 
@@ -392,6 +421,19 @@ class AdminPage {
       this.adminDrawerOverlay.setAttribute('aria-hidden', 'false');
     }
     if (this.adminMenuBtn) this.adminMenuBtn.setAttribute('aria-expanded', 'true');
+    // 首次打开抽屉时展开当前账号有权限的全部导航分组，确保「更多」菜单即打开即完整，
+    // 不再依赖是否先点击过其他菜单项（折叠态才导致菜单项随机缺失）。
+    this.openAllAccordions();
+  }
+
+  openAllAccordions() {
+    this.accordionHeaders.forEach(header => {
+      const groupKey = header.dataset.accordion;
+      const body = this.sidebar.querySelector(`.accordion-body[data-accordion-body="${groupKey}"]`);
+      if (!body) return;
+      header.classList.add('open');
+      body.classList.add('open');
+    });
   }
 
   closeDrawer() {
@@ -1050,13 +1092,7 @@ class AdminPage {
     const status = statusColors[item.status] || statusColors.pending;
     const showActions = this.reportsTab === 'pending';
 
-    const reportTypeMap = {
-      spam: '垃圾广告',
-      harassment: '骚扰辱骂',
-      inappropriate: '内容不当',
-      other: '其他'
-    };
-    const typeLabel = reportTypeMap[item.report_type] || item.report_type || '其他';
+    const typeLabel = REPORT_TYPE_LABELS[item.report_type] || item.report_type || '其他';
 
     return `
       <div class="admin-list-item" style="
@@ -1090,6 +1126,10 @@ class AdminPage {
           <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); white-space: nowrap;">
             ${this.formatTime(item.created_at)}
           </span>
+        </div>
+        <div style="font-size: 0.875rem; margin-bottom: 0.5rem;">
+          <span style="color: var(--md-sys-color-on-surface-variant);">举报类型：</span>
+          <span style="color: var(--md-sys-color-on-surface);">${this.escapeHtml(typeLabel)}</span>
         </div>
         <div style="font-size: 0.875rem; margin-bottom: 0.5rem;">
           <span style="color: var(--md-sys-color-on-surface-variant);">举报说明：</span>
@@ -1472,6 +1512,9 @@ class AdminPage {
           return false;
         }
 
+        // 敏感词前端预检：命中则弹全屏警告，不提交
+        if (this.precheckAnnouncement(title, content)) return false;
+
         const response = await announcementService.adminCreate(title, content, publish);
         if (response.success) {
           this.showSnackbar(publish ? '公告已创建并发布' : '公告已创建（草稿）');
@@ -1538,6 +1581,9 @@ class AdminPage {
           this.showSnackbar('请输入公告内容');
           return false;
         }
+
+        // 敏感词前端预检：命中则弹全屏警告，不提交
+        if (this.precheckAnnouncement(newTitle, newContent)) return false;
 
         const response = await announcementService.adminUpdate(id, newTitle, newContent);
         if (response.success) {

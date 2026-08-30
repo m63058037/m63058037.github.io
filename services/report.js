@@ -1,5 +1,6 @@
 import { apiService } from './api.js';
 import { authService } from './auth.js';
+import { sensitiveWordService } from './sensitive-word.js';
 
 function createResponse(success, data = null, message = '', statusCode = 200) {
   return {
@@ -80,12 +81,22 @@ export const reportService = {
         return createResponse(false, null, '您已经举报过此内容，请勿重复举报', 400);
       }
 
+      const trimmedContent = content.trim();
+      if (trimmedContent.length > 500) {
+        return createResponse(false, null, '举报说明不能超过500个字符', 400);
+      }
+
+      if (trimmedContent) {
+        const block = await sensitiveWordService.verify(trimmedContent);
+        if (block) return block;
+      }
+
       const reportData = {
         reporter_id: userId,
         target_type: targetType,
         target_id: targetId,
         report_type: reportType,
-        content: content.trim(),
+        content: trimmedContent,
         status: 'pending'
       };
 

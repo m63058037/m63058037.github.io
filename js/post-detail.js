@@ -5,6 +5,8 @@ import { commentService } from '../services/comment.js';
 import { favoriteService } from '../services/favorite.js';
 import { reportService, ReportTypes, ReportTypeLabels, REPORT_TYPES_ORDER } from '../services/report.js';
 import { escapeHtml } from '../utils/helpers.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 class PostDetailPage {
   constructor() {
@@ -100,9 +102,12 @@ class PostDetailPage {
       await this.checkSession();
       await this.getCurrentUser();
       await this.loadPost();
-      await this.loadLikes();
-      await this.loadFavorites();
-      await this.loadComments();
+      // 点赞/收藏/评论相互独立且仅依赖 postId，可并行加载，减少串行等待
+      await Promise.all([
+        this.loadLikes(),
+        this.loadFavorites(),
+        this.loadComments()
+      ]);
     } catch (error) {
       this.showSnackbar('加载失败');
     }
@@ -697,6 +702,13 @@ class PostDetailPage {
       return;
     }
 
+    // 敏感词前端预检：命中则弹全屏警告，保留输入，不提交
+    const hit = sensitiveWordService.check(content);
+    if (hit.level > 0) {
+      showContentWarnDialog();
+      return;
+    }
+
     this.isSubmitting = true;
     this.bottomSheetCommentSubmitBtn.disabled = true;
 
@@ -966,6 +978,15 @@ class PostDetailPage {
 
       if (this.isSubmitting) {
         return;
+      }
+
+      // 敏感词前端预检：命中则弹全屏警告，不提交
+      if (content) {
+        const hit = sensitiveWordService.check(content);
+        if (hit.level > 0) {
+          showContentWarnDialog();
+          return;
+        }
       }
 
       this.isSubmitting = true;

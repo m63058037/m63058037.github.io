@@ -4,6 +4,8 @@ import { storageService } from '../services/storage.js';
 import { config } from '../config/supabase.js';
 import { ALL_BRANCH, ALL_BRANCH_NAME } from '../config/branches.js';
 import { escapeHtml } from '../utils/helpers.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 class PostPage {
   constructor() {
@@ -391,6 +393,9 @@ class PostPage {
       const titleText = this.titleInput.value.trim();
       const contentText = this.contentInput.value;
 
+      // 敏感词前端预检：命中则弹全屏警告，保留原输入，不提交
+      if (this.precheckSensitive(titleText, contentText)) return;
+
       if (this.isEditMode) {
         await this.handleEditSubmit(titleText, contentText);
       } else {
@@ -401,6 +406,20 @@ class PostPage {
     } finally {
       this.setLoading(false);
     }
+  }
+
+  /** 敏感词前端预检，命中返回 true 并弹全屏警告弹窗（不提交、不清空输入） */
+  precheckSensitive(...texts) {
+    for (const text of texts) {
+      if (!text) continue;
+      const hit = sensitiveWordService.check(text);
+      if (hit.level > 0) {
+        this.setLoading(false);
+        showContentWarnDialog();
+        return true;
+      }
+    }
+    return false;
   }
 
   async handleCreateSubmit(titleText, contentText) {

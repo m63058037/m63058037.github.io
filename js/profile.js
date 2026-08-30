@@ -1,5 +1,8 @@
 import { authService } from '../services/auth.js';
 import { storageService } from '../services/storage.js';
+import { profileService } from '../services/profile.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 class ProfilePage {
   constructor() {
@@ -231,15 +234,32 @@ class ProfilePage {
         updates.avatar = this.avatarUploadedUrl;
       }
 
-      const response = await authService.updateUserMetadata(updates);
+      // 敏感词前端预检（昵称/签名）：命中则弹全屏警告，保留输入，不提交
+      const blockHit = [updates.nickname, updates.signature]
+        .filter(Boolean)
+        .map(t => sensitiveWordService.check(t))
+        .find(h => h.level > 0);
+      if (blockHit) {
+        this.setLoading(false);
+        showContentWarnDialog();
+        return;
+      }
+
+      // 持久化到 profiles 表（唯一权威数据源）：头像/昵称/简介/签名在此真正落地
+      const response = await profileService.updateProfile(updates, this.currentUser.id);
 
       if (response.success) {
+        // 同步 Auth user_metadata，避免与 profiles 数据源不一致（仅兜底，失败不阻断保存）
+        try {
+          await authService.updateUserMetadata(updates);
+        } catch (e) {}
+
         this.originalData = {
           nickname: this.nicknameInput.value.trim(),
           bio: this.bioInput.value.trim(),
           signature: this.signatureInput.value.trim()
         };
-        // 头像已持久化，同步到当前用户并重置头像变更状态
+        // 头像已持久化到 profiles，同步到当前用户并重置头像变更状态
         this.currentUser.avatar = this.avatarUploadedUrl || this.currentUser.avatar;
         this.avatarUploadedUrl = null;
         this.avatarChanged = false;
@@ -247,7 +267,8 @@ class ProfilePage {
         this.profileNickname.textContent = this.nicknameInput.value.trim();
         this.showSnackbar('资料保存成功');
       } else {
-        this.showSnackbar(response.message);
+        // 保存失败（如 Storage 已成功但 profiles 更新失败）：明确提示失败并保留可重试状态
+        this.showSnackbar(response.error || '资料保存失败，请点击保存重试');
       }
     } catch (error) {
       this.showSnackbar('保存失败，请稍后重试');

@@ -41,6 +41,7 @@ class HomePage {
       await this.initComponents();
       this.bindEvents();
       this.initAnnouncements();
+      this.initLottieIcons();
     } catch (error) {
       console.error('[HomePage] 初始化失败:', error);
       this.showSnackbar('页面加载失败');
@@ -222,10 +223,14 @@ class HomePage {
     this.announcementModal.className = 'announcement-modal-overlay';
     this.announcementModal.innerHTML = `
       <div class="announcement-modal">
-        <h3 class="announcement-modal-title"></h3>
+        <div class="announcement-modal-header">
+          <h3 class="announcement-modal-title"></h3>
+          <div class="announcement-modal-meta"></div>
+        </div>
         <div class="announcement-modal-content"></div>
-        <div class="announcement-modal-meta"></div>
-        <button class="announcement-modal-confirm" type="button">知道了</button>
+        <div class="announcement-modal-footer">
+          <button class="announcement-modal-confirm" type="button">知道了</button>
+        </div>
       </div>
     `;
 
@@ -311,6 +316,24 @@ class HomePage {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
     if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  /**
+   * 初始化Lottie图标
+   * 暂停Lottie图标替换，确保基础UI正常
+   */
+  async initLottieIcons() {
+    try {
+      // 暂停所有Lottie图标替换，确保基础UI正常
+      console.log('[LottieIcon] 暂停Lottie图标替换，确保基础UI正常');
+      
+      // 目前只保留Lottie库加载，但不进行图标替换
+      // 这样可以避免破坏DOM结构和样式冲突
+      
+      console.log('[HomePage] Lottie图标初始化完成（暂停替换模式）');
+    } catch (error) {
+      console.warn('[HomePage] Lottie图标初始化失败:', error);
+    }
   }
 }
 

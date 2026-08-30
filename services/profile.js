@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { sensitiveWordService } from './sensitive-word.js';
 
 export const profileService = {
   /**
@@ -63,6 +64,42 @@ export const profileService = {
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: error.message || '获取用户角色失败' };
+    }
+  },
+
+  /**
+   * 更新当前用户的个人资料字段（持久化到 profiles 表，为头像等资料的唯一权威数据源）
+   * @param {object} fields - 需要更新的字段（如 nickname/bio/signature/avatar）
+   * @param {string} userId - 当前用户 id
+   * @returns {Promise<object>} { success, data, error }
+   */
+  async updateProfile(fields, userId) {
+    try {
+      if (!fields || Object.keys(fields).length === 0) {
+        return { success: false, error: '没有需要保存的修改' };
+      }
+      if (!userId) {
+        return { success: false, error: '未登录' };
+      }
+
+      if (fields.nickname) {
+        const block = await sensitiveWordService.verify(fields.nickname);
+        if (block) return { success: false, error: block.message };
+      }
+      if (fields.signature) {
+        const block = await sensitiveWordService.verify(fields.signature);
+        if (block) return { success: false, error: block.message };
+      }
+
+      const response = await api.update('profiles', fields, { id: userId });
+
+      if (!response.success) {
+        return { success: false, error: response.message || '资料更新失败' };
+      }
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '资料更新失败' };
     }
   }
 };
