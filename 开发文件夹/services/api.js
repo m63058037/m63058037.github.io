@@ -303,4 +303,7 @@ export const apiService = {
 
   };
 
+// 别名导出，供 Service 层使用
+export const api = apiService;
+
 export default apiService;

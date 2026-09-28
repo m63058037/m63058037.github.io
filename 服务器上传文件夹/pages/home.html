@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>校园论坛 - 首页</title>
+  <title>执信论坛 - 首页</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=20260821g">
+  <link rel="stylesheet" href="../css/styles.css?v=20260822a">
+  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20260822b">
 </head>
 <body class="home-page">
   <header class="home-header">
@@ -19,17 +20,8 @@
           </svg>
         </button>
         <a href="home.html" class="logo-link">
-          <svg class="logo" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="24" r="20" fill="url(#logoGradient)"/>
-            <path d="M16 20h4v8h-4v-8zm8 0h4v8h-4v-8zm8 0h4v8h-4v-8zM14 34h20v-2H14v2z" fill="white"/>
-            <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#673ab7"/>
-                <stop offset="100%" style="stop-color:#3f51b5"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <span class="site-title">校园论坛 <span class="version-badge">Preview 2.0</span></span>
+          <img src="../logo/微信图片_20260829230932_80_21_transparent.png" alt="执信论坛" class="logo">
+          <span class="site-title">执信论坛 <span class="version-badge">正式版 1.0</span></span>
         </a>
       </div>
 
@@ -67,18 +59,9 @@
       <div class="sidebar-content">
         <div class="sidebar-header">
           <div class="sidebar-logo">
-            <svg viewBox="0 0 48 48" fill="none">
-              <circle cx="24" cy="24" r="20" fill="url(#sidebarLogoGradient)"/>
-              <path d="M16 20h4v8h-4v-8zm8 0h4v8h-4v-8zm8 0h4v8h-4v-8zM14 34h20v-2H14v2z" fill="white"/>
-              <defs>
-                <linearGradient id="sidebarLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style="stop-color:#673ab7"/>
-                  <stop offset="100%" style="stop-color:#3f51b5"/>
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="../logo/微信图片_20260829230932_80_21_transparent.png" alt="执信论坛" class="logo">
           </div>
-          <span class="sidebar-title">校园论坛</span>
+          <span class="sidebar-title">执信论坛</span>
           <button class="sidebar-close" id="sidebarClose" aria-label="关闭菜单">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -119,6 +102,14 @@
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
                 <span>我的收藏</span>
+              </a>
+            </li>
+            <li class="nav-item" id="navAdminEntry" style="display: none;">
+              <a href="admin.html">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13 11H11v2h2v-2zm3.29-5.53l.58 1.58 1.66.19 1.29.99-.79 1.38.72 1.51-1.48.76.02 1.67-1.64.32-.42 1.62-1.65-.29-.97 1.37-1.55-1.12-.88 1.42-1.57-.77.2-1.66-1.34-1 .47-1.61 1.62-.33L10 7.85H8.4zM12.1 3C8.42 1.78 4.56 3.33 3.34 7.02L5.1 7.6c.91-2.32 3.15-3.85 5.6-3.6L12.1 3zM21 13.1c-1.22-3.68-5.08-5.23-8.85-4.02l.58 1.76c2.36-.91 4.94.27 5.85 2.63l1.42-1.27zM15 15h-6v4a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-4z"/>
+                </svg>
+                <span>管理后台</span>
               </a>
             </li>
           </ul>
@@ -242,7 +233,12 @@
     </div>
   </div>
 
+  <!-- Lottie动画库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <!-- Lottie图标工具库 -->
+  <script src="../js/lottie-icon-utils.js?v=20260822b"></script>
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/home.js?v=20260821b"></script>
+  <script type="module" src="../js/home.js?v=20260822a"></script>
+<footer class="site-footer">© 2026 执信论坛 · 星夜工作室</footer>
 </body>
 </html>

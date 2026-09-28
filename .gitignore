@@ -1,0 +1,23 @@
+﻿# Dependencies
+node_modules/
+开发文件夹/node_modules/
+
+# OS / editor noise
+.DS_Store
+**/.DS_Store
+._*
+**/._*
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Nested git / archives / temp probes
+服务器上传文件夹/.git/
+**/.git/
+*.zip
+_cprobe.mjs
+
+# Large non-runtime asset dumps (keep source; skip storybook bundles if huge)
+图标/docs/
+图标/node_modules/

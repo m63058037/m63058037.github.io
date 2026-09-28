@@ -1,10 +1,18 @@
-import { authService } from '../services/auth.js';
+import { searchService } from '../services/search.js';
+import { escapeHtml } from '../utils/helpers.js';
+import { ALL_BRANCH, getBranchByName } from '../config/branches.js';
 
 class SearchPage {
   constructor() {
-    this.keyword = this.getKeyword();
-    this.currentFilter = 'all';
+    this.keyword = '';
+    this.branch = ALL_BRANCH;
     this.currentPage = 1;
+    this.pageSize = 20;
+    this.posts = [];
+    this.isLoading = false;
+    this.hasMore = true;
+    this.intersectionObserver = null;
+    this.sentinel = null;
 
     this.searchInput = document.getElementById('searchInput');
     this.searchButton = document.getElementById('searchButton');
@@ -25,60 +33,384 @@ class SearchPage {
     this.init();
   }
 
-  getKeyword() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('keyword') || '';
-  }
-
   async init() {
     try {
-      await this.checkSession();
+      this.parseParamsFromURL();
+
       if (this.keyword) {
         this.searchInput.value = this.keyword;
-        await this.performSearch();
+        await this.performSearch(true);
       }
+
+      this.setupInfiniteScroll();
       this.bindEvents();
+      this.initLottieIcons();
     } catch (error) {
       this.showSnackbar('加载失败');
     }
   }
 
-  async checkSession() {
-    const isLoggedIn = await authService.isLoggedIn();
-    if (!isLoggedIn) {
-      window.location.href = 'login.html';
-      throw new Error('User not logged in');
+  parseParamsFromURL() {
+    const params = new URLSearchParams(window.location.search);
+
+    // 关键词：优先 q 参数，兼容 keyword 参数
+    const q = params.get('q') || params.get('keyword') || '';
+    this.keyword = q.trim();
+
+    // 校区
+    const branch = params.get('branch');
+    if (branch) {
+      const info = getBranchByName(branch);
+      if (info) {
+        this.branch = branch;
+      }
     }
   }
 
-  async performSearch() {
+  async performSearch(isInitial = false) {
     const keyword = this.searchInput.value.trim();
-    if (!keyword) return;
+    if (!keyword) {
+      this.showSnackbar('请输入搜索内容');
+      return;
+    }
 
-    this.showLoading(true);
-    this.noResults.style.display = 'none';
-    this.resultsList.innerHTML = '';
+    if (isInitial) {
+      this.keyword = keyword;
+    } else if (keyword !== this.keyword) {
+      // 关键词变化，重置搜索
+      this.keyword = keyword;
+      this.currentPage = 1;
+      this.posts = [];
+      this.hasMore = true;
+      this.resultsList.innerHTML = '';
+      isInitial = true;
+    }
 
-    this.showLoading(false);
-    if (this.noResults) {
-      this.noResults.style.display = 'flex';
-      const noResultsP = this.noResults.querySelector('p');
-      if (noResultsP) {
-        noResultsP.textContent = '搜索功能开发中';
+    if (this.isLoading || (!isInitial && !this.hasMore)) return;
+
+    this.isLoading = true;
+
+    if (isInitial) {
+      this.showLoading(true);
+      this.noResults.style.display = 'none';
+    } else {
+      this.showLoadingMore(true);
+    }
+
+    try {
+      const response = await searchService.searchPosts(
+        this.keyword,
+        this.branch,
+        this.currentPage,
+        this.pageSize
+      );
+
+      if (!response.success) {
+        // 错误状态：显示错误信息，不显示空状态
+        this.showSnackbar(response.error || '搜索失败');
+        this.resultsList.style.display = 'none';
+        this.noResults.style.display = 'none';
+        return;
+      }
+
+      const result = response.data;
+      const posts = this.extractPosts(result);
+      const hasMore = this.extractHasMore(result, posts.length);
+
+      // 适配数据格式
+      const adaptedPosts = posts.map(post => this.adaptPostFormat(post));
+
+      if (isInitial) {
+        this.posts = adaptedPosts;
       } else {
-        this.noResults.innerHTML = '<p>搜索功能开发中</p>';
+        const existingIds = new Set(this.posts.map(p => p.id));
+        const newPosts = adaptedPosts.filter(p => !existingIds.has(p.id));
+        this.posts = [...this.posts, ...newPosts];
+      }
+
+      this.renderPosts(adaptedPosts, !isInitial);
+      this.currentPage++;
+
+      this.hasMore = hasMore;
+      if (!this.hasMore) {
+        this.showNoMore();
+      }
+    } catch (error) {
+      // 网络错误或其他异常
+      this.showSnackbar('搜索失败，请检查网络连接');
+      this.resultsList.style.display = 'none';
+      this.noResults.style.display = 'none';
+    } finally {
+      this.isLoading = false;
+      if (isInitial) {
+        this.showLoading(false);
+      } else {
+        this.showLoadingMore(false);
       }
     }
-    this.showSnackbar('搜索功能开发中');
+  }
+
+  extractPosts(result) {
+    if (!result) return [];
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result.data)) return result.data;
+    if (Array.isArray(result.posts)) return result.posts;
+    return [];
+  }
+
+  extractHasMore(result, loadedCount) {
+    if (result && typeof result.hasMore === 'boolean') return result.hasMore;
+    if (result && result.pagination && typeof result.pagination.hasMore === 'boolean') {
+      return result.pagination.hasMore;
+    }
+    if (result && result.pagination && result.pagination.totalPages) {
+      return this.currentPage < result.pagination.totalPages;
+    }
+    return loadedCount >= this.pageSize;
+  }
+
+  adaptPostFormat(post) {
+    // 适配搜索结果格式到 FeedComponent 期望的格式
+    return {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      excerpt: post.excerpt || post.content?.substring(0, 200) || '',
+      tags: post.tags || [],
+      is_hot: post.is_hot || false,
+      is_pinned: post.is_pinned || false,
+      created_at: post.created_at,
+      images: post.images || [],
+      likes_count: post.like_count ?? post.likes_count ?? 0,
+      comments_count: post.comment_count ?? post.comments_count ?? 0,
+      favorites_count: post.favorite_count ?? post.favorites_count ?? 0,
+      views_count: post.view_count ?? post.views_count ?? 0,
+      user: {
+        id: post.author_id || post.user_id,
+        nickname: post.author_name || post.user?.nickname || '用户',
+        avatar: post.author_avatar || post.user?.avatar || null
+      },
+      user_id: post.author_id || post.user_id,
+      author_branch: post.author_branch || post.branch || null
+    };
+  }
+
+  renderPosts(posts, append = false) {
+    posts.forEach(post => {
+      const postElement = this.createPostElement(post);
+      this.resultsList.appendChild(postElement);
+    });
+  }
+
+  createPostElement(post) {
+    const postCard = document.createElement('article');
+    postCard.className = 'post-card';
+    postCard.dataset.postId = post.id;
+
+    const hotBadge = post.is_hot
+      ? '<span class="post-badge hot">热门</span>'
+      : '';
+
+    const imagePreview = post.images && post.images.length > 0
+      ? this.createImagePreview(post.images)
+      : '';
+
+    const avatarUrl = post.user?.avatar ||
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user?.id || post.user_id}`;
+
+    const safeNickname = escapeHtml(post.user?.nickname || '用户');
+    const safeTitle = escapeHtml(post.title);
+    const safeExcerpt = escapeHtml(post.excerpt || post.content?.substring(0, 200) || '暂无内容');
+    const safeTags = post.tags && post.tags.length > 0
+      ? post.tags.slice(0, 5).map(tag => `<span class="post-tag">${escapeHtml(tag)}</span>`).join('')
+      : '';
+
+    postCard.innerHTML = `
+      <div class="post-header">
+        <div class="post-author">
+          <img src="${escapeHtml(avatarUrl)}" alt="${safeNickname}" class="author-avatar" />
+          <div class="author-info">
+            <a href="user-profile.html?uid=${escapeHtml(post.user?.id || post.user_id)}" class="author-name">${safeNickname}</a>
+            <span class="post-time">${this.formatTime(post.created_at)}</span>
+          </div>
+        </div>
+        <div class="post-badges">
+          ${hotBadge}
+        </div>
+      </div>
+
+      <h2 class="post-title">
+        <a href="post-detail.html?id=${escapeHtml(post.id)}">${safeTitle}</a>
+      </h2>
+
+      <p class="post-excerpt">${safeExcerpt}</p>
+
+      ${imagePreview}
+
+      <div class="post-footer">
+        <div class="post-meta">
+          ${safeTags}
+        </div>
+        <div class="post-stats">
+          <span class="stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            ${post.likes_count || 0}
+          </span>
+          <span class="stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            ${post.comments_count || 0}
+          </span>
+          <span class="stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+            ${post.favorites_count || 0}
+          </span>
+          <span class="stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            ${post.views_count || 0}
+          </span>
+        </div>
+      </div>
+    `;
+
+    return postCard;
+  }
+
+  createImagePreview(images) {
+    const previewCount = Math.min(images.length, 3);
+    const hasMore = images.length > 3;
+    const containerClass = previewCount === 1 ? 'post-images single' : 'post-images';
+
+    return `
+      <div class="${containerClass}">
+        ${images.slice(0, previewCount).map((img, index) => {
+          const url = img.url || img.image_url || '';
+          return `
+          <div class="post-image-wrapper">
+            <img src="${escapeHtml(url)}" alt="帖子图片${index + 1}" class="post-image" loading="lazy" onerror="this.style.display='none';" />
+          </div>
+          `;
+        }).join('')}
+        ${hasMore ? `<div class="post-image-more">+${images.length - 3}</div>` : ''}
+      </div>
+    `;
+  }
+
+  setupInfiniteScroll() {
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+    }
+
+    this.sentinel = document.createElement('div');
+    this.sentinel.className = 'infinite-scroll-sentinel';
+    this.sentinel.style.height = '1px';
+    this.pagination.parentNode.insertBefore(this.sentinel, this.pagination);
+    this.pagination.style.display = 'none';
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !this.isLoading && this.hasMore && this.keyword) {
+        this.performSearch(false);
+      }
+    }, {
+      rootMargin: '200px'
+    });
+
+    this.intersectionObserver.observe(this.sentinel);
+  }
+
+  formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
   }
 
   showLoading(isLoading) {
     if (isLoading) {
+      // 搜索中状态：只显示loading，隐藏结果和空状态
       this.searchLoading.style.display = 'flex';
       this.resultsList.style.display = 'none';
+      this.noResults.classList.remove('show');
     } else {
+      // 搜索完成：隐藏loading，根据结果显示结果或空状态
       this.searchLoading.style.display = 'none';
-      this.resultsList.style.display = 'block';
+      if (this.posts.length > 0) {
+        this.resultsList.style.display = 'block';
+        this.noResults.classList.remove('show');
+      } else {
+        this.resultsList.style.display = 'none';
+        // 只有在确实没有结果时才显示空状态
+        if (this.keyword && !this.isLoading) {
+          this.showEmptyState();
+        } else {
+          this.noResults.classList.remove('show');
+        }
+      }
+    }
+  }
+
+  showLoadingMore(isLoading) {
+    // 简单实现：在底部显示加载更多状态
+    let loadingMoreEl = document.getElementById('loadingMore');
+    if (isLoading) {
+      if (!loadingMoreEl) {
+        loadingMoreEl = document.createElement('div');
+        loadingMoreEl.id = 'loadingMore';
+        loadingMoreEl.className = 'loading-more';
+        loadingMoreEl.style.display = 'flex';
+        loadingMoreEl.style.justifyContent = 'center';
+        loadingMoreEl.style.padding = '20px';
+        loadingMoreEl.style.color = '#999';
+        loadingMoreEl.innerHTML = `
+          <svg class="loading-spinner" viewBox="25 25 50 50" style="width:24px;height:24px;margin-right:8px;">
+            <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100"/>
+          </svg>
+          <span>加载中...</span>
+        `;
+        this.sentinel.parentNode.insertBefore(loadingMoreEl, this.sentinel);
+      }
+      loadingMoreEl.style.display = 'flex';
+    } else if (loadingMoreEl) {
+      loadingMoreEl.style.display = 'none';
+    }
+  }
+
+  showNoMore() {
+    let noMoreEl = document.getElementById('noMorePosts');
+    if (!noMoreEl) {
+      noMoreEl = document.createElement('div');
+      noMoreEl.id = 'noMorePosts';
+      noMoreEl.className = 'no-more-posts';
+      noMoreEl.style.textAlign = 'center';
+      noMoreEl.style.padding = '20px';
+      noMoreEl.style.color = '#999';
+      noMoreEl.style.fontSize = '14px';
+      noMoreEl.textContent = '没有更多了';
+      this.sentinel.parentNode.insertBefore(noMoreEl, this.sentinel);
+    }
+    noMoreEl.style.display = 'block';
+  }
+
+  showEmptyState() {
+    // 只在确实没有搜索结果时显示空状态
+    if (this.posts.length === 0 && !this.isLoading) {
+      this.noResults.classList.add('show');
+      this.resultsList.style.display = 'none';
+    } else {
+      this.noResults.classList.remove('show');
     }
   }
 
@@ -86,36 +418,58 @@ class SearchPage {
     if (this.backButton) {
       this.backButton.addEventListener('click', () => this.goBack());
     }
+
     if (this.searchButton) {
-      this.searchButton.addEventListener('click', () => this.handleSearch());
+      this.searchButton.addEventListener('click', () => this.handleSearchSubmit());
     }
+
     if (this.searchInput) {
       this.searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') this.handleSearch();
+        if (e.key === 'Enter') {
+          this.handleSearchSubmit();
+        }
       });
     }
+
     if (this.snackbarAction) {
       this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
     }
-
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.currentFilter = btn.dataset.filter;
-        this.currentPage = 1;
-        this.performSearch();
-      });
-    });
   }
 
-  handleSearch() {
+  handleSearchSubmit() {
     const keyword = this.searchInput.value.trim();
     if (!keyword) {
       this.showSnackbar('请输入搜索内容');
       return;
     }
-    window.location.href = `search.html?keyword=${encodeURIComponent(keyword)}`;
+
+    // 更新 URL 并重新搜索
+    const url = new URL(window.location);
+    url.searchParams.set('q', keyword);
+    url.searchParams.set('branch', this.branch);
+    window.history.replaceState({}, '', url);
+
+    // 重置状态
+    this.keyword = keyword;
+    this.currentPage = 1;
+    this.posts = [];
+    this.hasMore = true;
+    this.isLoading = false;
+    
+    // 清空显示区域
+    this.resultsList.innerHTML = '';
+    this.noResults.style.display = 'none';
+    
+    // 清除"没有更多了"的提示
+    const noMoreEl = document.getElementById('noMorePosts');
+    if (noMoreEl) noMoreEl.style.display = 'none';
+    
+    // 清除"加载中"的提示
+    const loadingMoreEl = document.getElementById('loadingMore');
+    if (loadingMoreEl) loadingMoreEl.style.display = 'none';
+
+    // 开始搜索
+    this.performSearch(true);
   }
 
   showSnackbar(message) {
@@ -132,7 +486,74 @@ class SearchPage {
   }
 
   goBack() {
-    window.history.back();
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = 'home.html';
+    }
+  }
+
+  /**
+   * 初始化Lottie图标
+   * 替换页面中的静态SVG图标为Lottie动画图标
+   */
+  async initLottieIcons() {
+    try {
+      // 等待DOM完全渲染
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 定义图标替换配置
+      const iconReplacements = {
+        // 搜索图标
+        '.search-bar-inline .search-button svg': 'search',
+        '.back-button svg': 'arrowLeft',
+        
+        // 加载动画图标
+        '.search-loading svg': 'loading',
+        
+        // 无结果图标
+        '.no-results svg': 'search'
+      };
+
+      // 批量加载图标
+      const iconNames = [...new Set(Object.values(iconReplacements))];
+      await lottieIconUtils.loadIcons(iconNames);
+
+      // 替换图标
+      Object.entries(iconReplacements).forEach(([selector, iconName]) => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          lottieIconUtils.loadIcon(iconName, { 
+            interactive: true,
+            width: '24px',
+            height: '24px'
+          }).then(iconElement => {
+            // 保留原有的类名和属性
+            const originalClasses = element.className;
+            const originalAttributes = {};
+            for (let attr of element.attributes) {
+              if (attr.name !== 'class') {
+                originalAttributes[attr.name] = attr.value;
+              }
+            }
+            
+            // 清空元素并添加新图标
+            element.innerHTML = '';
+            element.appendChild(iconElement);
+            
+            // 恢复原有的类名和属性
+            element.className = originalClasses;
+            Object.entries(originalAttributes).forEach(([name, value]) => {
+              element.setAttribute(name, value);
+            });
+          });
+        });
+      });
+
+      console.log('[SearchPage] Lottie图标初始化完成');
+    } catch (error) {
+      console.warn('[SearchPage] Lottie图标初始化失败:', error);
+    }
   }
 }
 

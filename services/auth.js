@@ -2,6 +2,7 @@ import { supabase, config } from '../config/supabase.js';
 import { generateUUID } from '../utils/helpers.js';
 import { loggerService } from './logger.js';
 import { apiService } from './api.js';
+import { sensitiveWordService } from './sensitive-word.js';
 
 function createResponse(success, data = null, message = '', statusCode = 200) {
   return { success, data, message, statusCode };
@@ -121,6 +122,11 @@ export const authService = {
 
       const email = this._generateVirtualEmail(uid);
 
+      if (nickname) {
+        const block = await sensitiveWordService.verify(nickname);
+        if (block) return block;
+      }
+
       const metaData = {
         nickname: nickname || uid,
         role: UserRoles.MEMBER,
@@ -216,10 +222,7 @@ export const authService = {
 
       let profile = null;
       try {
-        const profileResponse = await apiService.findOne('profiles', { id: user.id });
-        if (profileResponse.success && profileResponse.data) {
-          profile = profileResponse.data;
-        }
+        profile = await this._getOwnProfile();
       } catch (e) {
         // profiles 表可能尚未迁移
       }
@@ -242,8 +245,8 @@ export const authService = {
         class_number: profile?.class_number || user.user_metadata?.class_number || null,
         student_number: profile?.student_number || user.user_metadata?.student_number || null,
         account_status: profile?.account_status || 'active',
-        is_dev_admin: isDevAdmin,
-        is_admin: isDevAdmin || role === UserRoles.ADMIN,
+        is_dev_admin: isDevAdmin || role === UserRoles.DEV_ADMIN,
+        is_admin: isDevAdmin || role === UserRoles.ADMIN || role === UserRoles.DEV_ADMIN,
         created_at: user.created_at,
         updated_at: user.updated_at
       };
@@ -256,14 +259,7 @@ export const authService = {
 
   async getProfile() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const response = await apiService.findOne('profiles', { id: user.id });
-      if (response.success && response.data) {
-        return response.data;
-      }
-      return null;
+      return await this._getOwnProfile();
     } catch (error) {
       return null;
     }
@@ -350,8 +346,7 @@ export const authService = {
       if (DEV_ADMIN_UIDS.includes(uid)) return true;
       let profile = null;
       try {
-        const r = await apiService.findOne('profiles', { id: user.id });
-        if (r.success && r.data) profile = r.data;
+        profile = await this._getOwnProfile();
       } catch (e) {}
       const role = profile?.role || user.user_metadata?.role || UserRoles.MEMBER;
       return role === UserRoles.ADMIN || role === UserRoles.DEV_ADMIN;
@@ -368,8 +363,7 @@ export const authService = {
       if (DEV_ADMIN_UIDS.includes(uid)) return true;
       let profile = null;
       try {
-        const r = await apiService.findOne('profiles', { id: user.id });
-        if (r.success && r.data) profile = r.data;
+        profile = await this._getOwnProfile();
       } catch (e) {}
       return profile?.role === UserRoles.DEV_ADMIN;
     } catch (error) {
@@ -522,7 +516,8 @@ export const authService = {
 
   async getUserInfo(userId) {
     try {
-      const response = await apiService.findOne('profiles', { id: userId });
+      // 仅暴露公开发布所需的字段，最小权限原则：不返回 student_number/class_number/cohort/role/account_status/uid 等敏感身份字段
+      const response = await apiService.findOne('profiles', { id: userId }, 'id, nickname, avatar, bio, signature');
       if (response.success && response.data) {
         const p = response.data;
         return {
@@ -530,20 +525,30 @@ export const authService = {
           nickname: p.nickname || '用户',
           avatar: p.avatar || null,
           bio: p.bio || '',
-          signature: p.signature || '',
-          student_type: p.student_type || 'school',
-          branch: p.branch || null,
-          grade: p.grade || null,
-          cohort: p.cohort || null,
-          class_number: p.class_number || null,
-          student_number: p.student_number || null,
-          account_status: p.account_status || 'active',
-          role: p.role || UserRoles.MEMBER
+          signature: p.signature || ''
         };
       }
       return { id: userId, nickname: '用户', avatar: null, bio: '', signature: '' };
     } catch (error) {
       return { id: userId, nickname: '用户', avatar: null, bio: '', signature: '' };
+    }
+  },
+
+  /**
+   * 读取当前登录用户的完整资料（本人身份信息）。
+   * 通过 SECURITY DEFINER RPC get_own_profile 绕过 profiles 表列级权限限制，
+   * 仅返回自己的行，用于权限判断、资格校验、个人资料展示等场景。
+   * 返回 null 表示未登录或查询失败。
+   */
+  async _getOwnProfile() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const r = await apiService.findOne('profiles', { id: user.id });
+      return r && r.success && r.data ? r.data : null;
+    } catch (e) {
+      console.warn('[_getOwnProfile] 异常:', e.message);
+      return null;
     }
   },
 
@@ -555,7 +560,7 @@ export const authService = {
 
       const uniqueIds = [...new Set(userIds)];
       const response = await apiService.query('profiles', {
-        select: 'id, nickname, avatar, bio, signature, student_type, branch, grade, cohort, class_number, student_number, account_status, role',
+        select: 'id, nickname, avatar, bio, signature',
         filter: { id: uniqueIds }
       });
 
@@ -570,15 +575,7 @@ export const authService = {
           nickname: profile.nickname || '用户',
           avatar: profile.avatar || null,
           bio: profile.bio || '',
-          signature: profile.signature || '',
-          student_type: profile.student_type || 'school',
-          branch: profile.branch || null,
-          grade: profile.grade || null,
-          cohort: profile.cohort || null,
-          class_number: profile.class_number || null,
-          student_number: profile.student_number || null,
-          account_status: profile.account_status || 'active',
-          role: profile.role || UserRoles.MEMBER
+          signature: profile.signature || ''
         };
       });
 

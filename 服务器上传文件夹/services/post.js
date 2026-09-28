@@ -1,6 +1,7 @@
 import { apiService } from './api.js';
 import { authService } from './auth.js';
 import { loggerService } from './logger.js';
+import { sensitiveWordService } from './sensitive-word.js';
 
 function createResponse(success, data = null, message = '', statusCode = 200) {
   return {
@@ -262,6 +263,11 @@ export const postService = {
         return createResponse(false, null, permission.reason, 403);
       }
 
+      const blockTitle = await sensitiveWordService.verify(title);
+      if (blockTitle) return blockTitle;
+      const blockContent = await sensitiveWordService.verify(content);
+      if (blockContent) return blockContent;
+
       const tagResult = validateTags(tags);
       if (!tagResult.valid) {
         return createResponse(false, null, tagResult.message, 400);
@@ -342,6 +348,11 @@ export const postService = {
       if (postResponse.data.user_id !== userId) {
         return createResponse(false, null, '无权修改此帖子', 403);
       }
+
+      const blockTitle = await sensitiveWordService.verify(title);
+      if (blockTitle) return blockTitle;
+      const blockContent = await sensitiveWordService.verify(content);
+      if (blockContent) return blockContent;
 
       const tagResult = validateTags(tags);
       if (!tagResult.valid) {

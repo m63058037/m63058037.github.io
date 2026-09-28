@@ -2,6 +2,8 @@ import { authService } from '../services/auth.js';
 import { escapeHtml, calculateCohort } from '../utils/helpers.js';
 import { USER_AGREEMENT_TEXT, PRIVACY_POLICY_TEXT } from './agreement-data.js';
 import { getBranchOptions } from '../config/branches.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 class RegisterPage {
   constructor() {
@@ -505,6 +507,14 @@ class RegisterPage {
     try {
       const password = this.passwordInput.value;
       const nickname = this.nicknameInput.value.trim();
+
+      // 敏感词前端预检（昵称）：命中则弹全屏警告，保留输入，不提交
+      if (nickname && sensitiveWordService.check(nickname).level > 0) {
+        this.setLoading(false);
+        showContentWarnDialog();
+        return;
+      }
+
       const studentType = this.getStudentType();
       const branch = this.getBranch();
       const grade = this.getGrade();

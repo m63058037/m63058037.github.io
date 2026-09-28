@@ -1,5 +1,6 @@
 import { apiService } from './api.js';
 import { authService } from './auth.js';
+import { sensitiveWordService } from './sensitive-word.js';
 
 function createResponse(success, data = null, message = '', statusCode = 200) {
   return {
@@ -24,6 +25,9 @@ export const commentService = {
       if (!permission.allowed) {
         return createResponse(false, null, permission.reason, 403);
       }
+
+      const block = await sensitiveWordService.verify(content);
+      if (block) return block;
 
       const commentData = {
         post_id: postId,

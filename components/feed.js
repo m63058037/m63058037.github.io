@@ -232,7 +232,7 @@ export class FeedComponent {
         <div class="post-author">
           <img src="${escapeHtml(avatarUrl)}" alt="${safeNickname}" class="author-avatar" />
           <div class="author-info">
-            <span class="author-name">${safeNickname}</span>
+            <a href="user-profile.html?uid=${escapeHtml(post.user?.id || post.user_id)}" class="author-name">${safeNickname}</a>
             <span class="post-time">${this.formatTime(post.created_at)}</span>
           </div>
         </div>
@@ -290,6 +290,14 @@ export class FeedComponent {
         this.openLightbox(url);
       });
     });
+
+    // 阻止作者名称链接点击冒泡
+    const authorNameLink = postCard.querySelector('.author-name');
+    if (authorNameLink) {
+      authorNameLink.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
 
     return postCard;
   }

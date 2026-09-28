@@ -1,5 +1,8 @@
 import { authService } from '../services/auth.js';
 import { storageService } from '../services/storage.js';
+import { profileService } from '../services/profile.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 class ProfilePage {
   constructor() {
@@ -18,6 +21,7 @@ class ProfilePage {
     this.avatarUploadStatus = document.getElementById('avatarUploadStatus');
     
     this.profileNickname = document.getElementById('profileNickname');
+    this.profileRoleBadge = document.getElementById('profileRoleBadge');
     this.profileEmail = document.getElementById('profileEmail');
     
     this.bioCounter = document.getElementById('bioCounter');
@@ -34,6 +38,10 @@ class ProfilePage {
     this.originalData = {};
     this.currentUser = null;
     this.snackbarTimer = null;
+
+    // 头像状态：选择上传后的暂存 URL + 变更标记，纳入统一保存链路
+    this.avatarUploadedUrl = null;
+    this.avatarChanged = false;
     
     this.init();
   }
@@ -85,6 +93,8 @@ class ProfilePage {
     
     this.profileNickname.textContent = this.currentUser.nickname || '用户';
     this.profileEmail.textContent = this.currentUser.email;
+
+    this.renderRoleBadge();
     
     this.updateCounter(this.bioInput, this.bioCounter);
     this.updateCounter(this.signatureInput, this.signatureCounter);
@@ -93,6 +103,20 @@ class ProfilePage {
       this.avatarImg.src = this.currentUser.avatar;
     } else {
       this.avatarImg.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.currentUser.id}`;
+    }
+  }
+
+  renderRoleBadge() {
+    if (!this.currentUser || !this.profileRoleBadge) return;
+    const role = this.currentUser.role;
+    const roleText = role === 'dev_admin' ? '开发管理员'
+      : role === 'admin' ? '管理员'
+      : '';
+    if (roleText) {
+      this.profileRoleBadge.textContent = roleText;
+      this.profileRoleBadge.style.display = 'inline-flex';
+    } else {
+      this.profileRoleBadge.style.display = 'none';
     }
   }
 
@@ -206,19 +230,45 @@ class ProfilePage {
       if (this.signatureInput.value !== this.originalData.signature) {
         updates.signature = this.signatureInput.value.trim();
       }
-      
-      const response = await authService.updateUserMetadata(updates);
-      
+      if (this.avatarChanged && this.avatarUploadedUrl) {
+        updates.avatar = this.avatarUploadedUrl;
+      }
+
+      // 敏感词前端预检（昵称/签名）：命中则弹全屏警告，保留输入，不提交
+      const blockHit = [updates.nickname, updates.signature]
+        .filter(Boolean)
+        .map(t => sensitiveWordService.check(t))
+        .find(h => h.level > 0);
+      if (blockHit) {
+        this.setLoading(false);
+        showContentWarnDialog();
+        return;
+      }
+
+      // 持久化到 profiles 表（唯一权威数据源）：头像/昵称/简介/签名在此真正落地
+      const response = await profileService.updateProfile(updates, this.currentUser.id);
+
       if (response.success) {
+        // 同步 Auth user_metadata，避免与 profiles 数据源不一致（仅兜底，失败不阻断保存）
+        try {
+          await authService.updateUserMetadata(updates);
+        } catch (e) {}
+
         this.originalData = {
           nickname: this.nicknameInput.value.trim(),
           bio: this.bioInput.value.trim(),
           signature: this.signatureInput.value.trim()
         };
+        // 头像已持久化到 profiles，同步到当前用户并重置头像变更状态
+        this.currentUser.avatar = this.avatarUploadedUrl || this.currentUser.avatar;
+        this.avatarUploadedUrl = null;
+        this.avatarChanged = false;
+        this.avatarUploadStatus.textContent = '';
         this.profileNickname.textContent = this.nicknameInput.value.trim();
         this.showSnackbar('资料保存成功');
       } else {
-        this.showSnackbar(response.message);
+        // 保存失败（如 Storage 已成功但 profiles 更新失败）：明确提示失败并保留可重试状态
+        this.showSnackbar(response.error || '资料保存失败，请点击保存重试');
       }
     } catch (error) {
       this.showSnackbar('保存失败，请稍后重试');
@@ -228,7 +278,8 @@ class ProfilePage {
   }
 
   hasChanges() {
-    return this.nicknameInput.value.trim() !== this.originalData.nickname ||
+    return this.avatarChanged ||
+           this.nicknameInput.value.trim() !== this.originalData.nickname ||
            this.bioInput.value.trim() !== this.originalData.bio ||
            this.signatureInput.value.trim() !== this.originalData.signature;
   }
@@ -239,7 +290,17 @@ class ProfilePage {
     this.nicknameInput.value = this.originalData.nickname || '';
     this.bioInput.value = this.originalData.bio || '';
     this.signatureInput.value = this.originalData.signature || '';
-    
+
+    // 取消时回滚未保存的头像变更
+    if (this.avatarChanged) {
+      this.avatarImg.src = this.currentUser.avatar
+        ? this.currentUser.avatar
+        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.currentUser.id}`;
+      this.avatarUploadedUrl = null;
+      this.avatarChanged = false;
+      this.avatarUploadStatus.textContent = '';
+    }
+
     this.updateCounter(this.bioInput, this.bioCounter);
     this.updateCounter(this.signatureInput, this.signatureCounter);
     
@@ -278,21 +339,19 @@ class ProfilePage {
       }
       
       const response = await storageService.uploadAvatar(file, this.currentUser.id);
-      
+
       if (response.success) {
-        const updateResponse = await authService.updateUserMetadata({ avatar: response.data.url });
-        
-        if (updateResponse.success) {
-          this.avatarImg.src = response.data.url;
-          this.avatarUploadStatus.textContent = '上传成功';
-          setTimeout(() => {
+        // 文件已上传到存储桶，先暂存 URL 并标记变更，随保存一起持久化 avatar 字段
+        this.avatarUploadedUrl = response.data.url;
+        this.avatarChanged = true;
+        this.avatarImg.src = response.data.url;
+        this.avatarUploadStatus.textContent = '图片已上传，点击保存生效';
+        setTimeout(() => {
+          if (!this.avatarChanged) {
             this.avatarUploadStatus.textContent = '';
-          }, 2000);
-          this.showSnackbar('头像更新成功');
-        } else {
-          this.avatarUploadStatus.textContent = '上传失败';
-          this.showSnackbar(updateResponse.message || '头像关联失败');
-        }
+          }
+        }, 4000);
+        this.showSnackbar('头像已选择，请点击保存');
       } else {
         this.avatarUploadStatus.textContent = '上传失败';
         this.showSnackbar(response.message || '头像上传失败');

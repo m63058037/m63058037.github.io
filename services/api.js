@@ -18,6 +18,25 @@ function createResponse(success, data = null, message = '', statusCode = 200) {
 }
 
 /**
+ * 应用过滤条件。NULL 值必须使用 PostgREST 的 is.null（.eq(col, null) 会生成 eq.null 导致 400）。
+ * @param {object} query - supabase-js 查询构建器
+ * @param {object} filter - 过滤条件
+ * @returns {object} 原查询构建器
+ */
+function applyFilter(query, filter) {
+  for (const [key, value] of Object.entries(filter)) {
+    if (value === null) {
+      query = query.is(key, null);
+    } else if (Array.isArray(value)) {
+      query = query.in(key, value);
+    } else {
+      query = query.eq(key, value);
+    }
+  }
+  return query;
+}
+
+/**
  * API服务层
  * 所有数据库操作必须经过此层
  */
@@ -33,23 +52,17 @@ export const apiService = {
       const { select = '*', filter = {}, order = [], limit = null, offset = null } = options;
       
       let query = supabase.from(table).select(select);
-      
+
       if (filter && Object.keys(filter).length > 0) {
-        for (const [key, value] of Object.entries(filter)) {
-          if (Array.isArray(value)) {
-            query = query.in(key, value);
-          } else {
-            query = query.eq(key, value);
-          }
-        }
+        query = applyFilter(query, filter);
       }
-      
+
       if (order && order.length > 0) {
         order.forEach(({ column, ascending = true }) => {
           query = query.order(column, { ascending });
         });
       }
-      
+
       if (limit) {
         query = query.limit(limit);
       }
@@ -107,13 +120,7 @@ export const apiService = {
       let query = supabase.from(table).update(data);
       
       if (filter && Object.keys(filter).length > 0) {
-        for (const [key, value] of Object.entries(filter)) {
-          if (Array.isArray(value)) {
-            query = query.in(key, value);
-          } else {
-            query = query.eq(key, value);
-          }
-        }
+        query = applyFilter(query, filter);
       }
       
       const { data: result, error } = await query.select(returning ? '*' : null);
@@ -140,13 +147,7 @@ export const apiService = {
       let query = supabase.from(table).delete();
       
       if (filter && Object.keys(filter).length > 0) {
-        for (const [key, value] of Object.entries(filter)) {
-          if (Array.isArray(value)) {
-            query = query.in(key, value);
-          } else {
-            query = query.eq(key, value);
-          }
-        }
+        query = applyFilter(query, filter);
       }
       
       const { data: result, error } = await query.select(returning ? '*' : null);
@@ -170,11 +171,12 @@ export const apiService = {
    */
   async findOne(table, filter, select = '*') {
     try {
-      const { data, error } = await supabase
-        .from(table)
-        .select(select)
-        .match(filter)
-        .single();
+      if (!filter || Object.keys(filter).length === 0) {
+        return createResponse(false, null, '查询条件不能为空', 400);
+      }
+      let query = supabase.from(table).select(select);
+      query = applyFilter(query, filter);
+      const { data, error } = await query.single();
       
       if (error) {
         if (error.code === 'PGRST116') {
@@ -205,13 +207,7 @@ export const apiService = {
       let query = supabase.from(table).select(select, { count: 'exact' });
       
       if (filter && Object.keys(filter).length > 0) {
-        for (const [key, value] of Object.entries(filter)) {
-          if (Array.isArray(value)) {
-            query = query.in(key, value);
-          } else {
-            query = query.eq(key, value);
-          }
-        }
+        query = applyFilter(query, filter);
       }
       
       if (order && order.length > 0) {
@@ -302,5 +298,8 @@ export const apiService = {
   },
 
   };
+
+// 别名导出，供 Service 层使用
+export const api = apiService;
 
 export default apiService;

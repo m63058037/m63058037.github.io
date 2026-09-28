@@ -1,0 +1,285 @@
+/* ========== Lottie Icon Styles ========== */
+/* Lottie图标样式 - 统一视觉风格 */
+
+/* Lottie图标包装器样式 */
+.lottie-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* Lottie图标基础样式 */
+.lottie-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  position: relative;
+  transform: none;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+/* Lottie图标颜色主题 */
+.lottie-icon-heart {
+  color: var(--md-sys-color-primary);
+}
+
+.lottie-icon-star {
+  color: var(--md-sys-color-primary);
+}
+
+.lottie-icon-notification {
+  color: var(--md-sys-color-primary);
+}
+
+.lottie-icon-settings {
+  color: var(--md-sys-color-on-surface);
+}
+
+.lottie-icon-search {
+  color: var(--md-sys-color-on-surface);
+}
+
+.lottie-icon-edit {
+  color: var(--md-sys-color-on-surface);
+}
+
+.lottie-icon-bookmark {
+  color: var(--md-sys-color-primary);
+}
+
+.lottie-icon-trash {
+  color: var(--md-sys-color-error);
+}
+
+.lottie-icon-checkmark {
+  color: var(--md-sys-color-primary);
+}
+
+.lottie-icon-alert-triangle {
+  color: var(--md-sys-color-warning);
+}
+
+
+
+.lottie-icon:hover {
+  transform: scale(1.05);
+}
+
+.lottie-icon:active {
+  transform: scale(0.95);
+}
+
+/* Lottie图标尺寸变体 */
+.lottie-icon-sm {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.lottie-icon-md {
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.lottie-icon-lg {
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.lottie-icon-xl {
+  width: 48px;
+  height: 48px;
+  max-width: 48px;
+  max-height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+/* 备用图标样式（当Lottie加载失败时） */
+.fallback-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 按钮中的Lottie图标 */
+.btn .lottie-icon {
+  margin-right: 8px;
+}
+
+.btn-icon-only .lottie-icon {
+  margin: 0;
+}
+
+/* 卡片中的Lottie图标 */
+.card .lottie-icon {
+  margin-right: 12px;
+}
+
+/* 导航栏中的Lottie图标 */
+.nav-item .lottie-icon {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+/* 搜索栏中的Lottie图标 */
+.search-bar .lottie-icon {
+  margin-right: 8px;
+}
+
+/* 头像旁边的Lottie图标 */
+.user-menu .lottie-icon {
+  margin-right: 8px;
+}
+
+/* 侧边栏中的Lottie图标 */
+.sidebar .lottie-icon {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+/* Lottie图标加载状态 */
+.lottie-icon.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Lottie图标禁用状态 */
+.lottie-icon:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Lottie图标成功状态 */
+.lottie-icon.success {
+  animation: success-pulse 0.6s ease-out;
+}
+
+@keyframes success-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Lottie图标错误状态 */
+.lottie-icon.error {
+  animation: error-shake 0.5s ease-out;
+}
+
+@keyframes error-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* 响应式Lottie图标 */
+@media (max-width: 768px) {
+  .lottie-icon {
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .lottie-icon:hover {
+    transform: scale(1.02);
+  }
+  
+  .lottie-icon:active {
+    transform: scale(0.98);
+  }
+}
+
+/* 减少动画偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  .lottie-icon {
+    transition: none;
+    animation: none !important;
+  }
+  
+  .lottie-icon:hover,
+  .lottie-icon:active {
+    transform: none;
+  }
+}
+
+/* 防止Lottie图标被误认为链接 */
+.lottie-icon,
+.lottie-icon-wrapper,
+.lottie-icon * {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* 确保Lottie图标不会继承文本样式 */
+.lottie-icon-wrapper {
+  text-decoration: none;
+  border: none;
+  outline: none;
+}
+
+/* 防止Lottie图标影响周围文本 */
+.lottie-icon + span,
+.lottie-icon-wrapper + span,
+span + .lottie-icon,
+span + .lottie-icon-wrapper {
+  vertical-align: middle;
+}
+
+/* Lottie图标暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .lottie-icon-heart,
+  .lottie-icon-star,
+  .lottie-icon-notification,
+  .lottie-icon-bookmark,
+  .lottie-icon-checkmark {
+    color: var(--md-sys-color-primary) !important;
+  }
+  
+  .lottie-icon-settings,
+  .lottie-icon-search,
+  .lottie-icon-edit {
+    color: var(--md-sys-color-on-surface) !important;
+  }
+  
+  .lottie-icon-trash {
+    color: #ef5350 !important;
+  }
+  
+  .lottie-icon-alert-triangle {
+    color: #ffb300 !important;
+  }
+}

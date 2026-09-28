@@ -14,7 +14,6 @@ export const supabase = supabaseClient;
 export const config = {
   supabaseUrl: SUPABASE_URL,
   supabaseAnonKey: SUPABASE_ANON_KEY,
-  adminUid: '10281028',
   avatarStoragePath: 'avatars',
   postImageStoragePath: 'post-images',
   maxPostImageSize: 5 * 1024 * 1024,

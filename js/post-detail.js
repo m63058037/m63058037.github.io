@@ -5,6 +5,8 @@ import { commentService } from '../services/comment.js';
 import { favoriteService } from '../services/favorite.js';
 import { reportService, ReportTypes, ReportTypeLabels, REPORT_TYPES_ORDER } from '../services/report.js';
 import { escapeHtml } from '../utils/helpers.js';
+import { sensitiveWordService } from '../services/sensitive-word.js';
+import { showContentWarnDialog } from '../components/content-warn-dialog.js';
 
 class PostDetailPage {
   constructor() {
@@ -88,6 +90,11 @@ class PostDetailPage {
     return params.get('id');
   }
 
+  getFrom() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('from');
+  }
+
   async init() {
     try {
       this.createLightbox();
@@ -95,9 +102,12 @@ class PostDetailPage {
       await this.checkSession();
       await this.getCurrentUser();
       await this.loadPost();
-      await this.loadLikes();
-      await this.loadFavorites();
-      await this.loadComments();
+      // 点赞/收藏/评论相互独立且仅依赖 postId，可并行加载，减少串行等待
+      await Promise.all([
+        this.loadLikes(),
+        this.loadFavorites(),
+        this.loadComments()
+      ]);
     } catch (error) {
       this.showSnackbar('加载失败');
     }
@@ -153,7 +163,7 @@ class PostDetailPage {
       this.detailAuthorAvatar.dataset.errorHandled = 'true';
       this.detailAuthorAvatar.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user?.id || post.user_id}`;
     };
-    this.detailAuthorName.textContent = post.user?.nickname || '用户';
+    this.detailAuthorName.innerHTML = `<a href="user-profile.html?uid=${escapeHtml(post.user?.id || post.user_id)}">${escapeHtml(post.user?.nickname || '用户')}</a>`;
     this.detailPostTime.textContent = this.formatTime(post.created_at);
     this.detailTitle.textContent = post.title;
     this.detailBody.textContent = post.content;
@@ -692,6 +702,13 @@ class PostDetailPage {
       return;
     }
 
+    // 敏感词前端预检：命中则弹全屏警告，保留输入，不提交
+    const hit = sensitiveWordService.check(content);
+    if (hit.level > 0) {
+      showContentWarnDialog();
+      return;
+    }
+
     this.isSubmitting = true;
     this.bottomSheetCommentSubmitBtn.disabled = true;
 
@@ -715,9 +732,24 @@ class PostDetailPage {
   }
 
   // Bottom Sheet
+  getSheetSnap() {
+    const h = window.innerHeight;
+    return {
+      max: Math.round(h * 0.90),
+      def: Math.round(h * 0.68),
+      min: Math.round(h * 0.45)
+    };
+  }
+
+  setSheetHeight(px) {
+    this.bottomSheet.style.setProperty('--sheet-h', `${px}px`);
+  }
+
   openBottomSheet() {
     this.scrollY = window.scrollY;
     document.body.style.top = `-${this.scrollY}px`;
+    // 初始给一个舒适的中间档位，保证评论区可见，且可上拉展开/下拉收起
+    this.setSheetHeight(this.getSheetSnap().def);
     this.bottomSheetOverlay.classList.add('active');
     this.bottomSheet.classList.add('active');
     document.body.classList.add('sheet-open');
@@ -948,6 +980,15 @@ class PostDetailPage {
         return;
       }
 
+      // 敏感词前端预检：命中则弹全屏警告，不提交
+      if (content) {
+        const hit = sensitiveWordService.check(content);
+        if (hit.level > 0) {
+          showContentWarnDialog();
+          return;
+        }
+      }
+
       this.isSubmitting = true;
       submitBtn.disabled = true;
       submitBtn.textContent = '提交中...';
@@ -979,7 +1020,23 @@ class PostDetailPage {
   }
 
   bindEvents() {
-    this.backButton.addEventListener('click', () => this.goBack());
+    const from = this.getFrom();
+    if (from === 'create-post') {
+      // 发布成功流程进入：返回 Home，绝不再回发帖页，避免重复发帖
+      this.backButton.addEventListener('click', () => {
+        window.location.href = 'home.html';
+      });
+    } else if (from === 'admin-reports') {
+      // 管理员举报定位进入：返回举报审核
+      const backSpan = this.backButton.querySelector('span');
+      if (backSpan) backSpan.textContent = '返回举报审核';
+      this.backButton.addEventListener('click', () => {
+        window.location.href = 'admin.html#reports';
+      });
+    } else {
+      // 普通来源：保持原有返回逻辑
+      this.backButton.addEventListener('click', () => this.goBack());
+    }
     this.editBtn.addEventListener('click', () => this.handleEdit());
     this.deleteBtn.addEventListener('click', () => this.handleDelete());
     this.moreButton.addEventListener('click', () => this.showSnackbar('更多功能开发中'));
@@ -1026,35 +1083,75 @@ class PostDetailPage {
       this.replyIndicatorCancel.addEventListener('click', () => this.cancelReply());
     }
 
-    // 向下滑动关闭 Bottom Sheet
-    let startY = 0;
-    let currentY = 0;
+    // 评论面板拖拽：上拉展开 / 下拉收起，内容区滚动与面板手势互不抢占
+    let sheetStartY = 0;
+    let sheetStartH = 0;
+    let sheetDragging = false;
+    const sheetContent = this.bottomSheet ? this.bottomSheet.querySelector('.bottom-sheet-content') : null;
 
     if (this.bottomSheet) {
       this.bottomSheet.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
+        if (e.touches.length !== 1) return;
+        sheetStartY = e.touches[0].clientY;
+        sheetStartH = this.bottomSheet.offsetHeight;
+        sheetDragging = false;
+        this.bottomSheet.style.transition = 'none';
       }, { passive: true });
 
       this.bottomSheet.addEventListener('touchmove', (e) => {
-        currentY = e.touches[0].clientY;
-        const diff = currentY - startY;
+        if (e.touches.length !== 1) return;
+        const deltaY = e.touches[0].clientY - sheetStartY;
+        const atTop = !sheetContent || sheetContent.scrollTop <= 0;
 
-        // 只有在滚动到顶部时才允许下拉关闭
-        const content = this.bottomSheet.querySelector('.bottom-sheet-content');
-        if (content && content.scrollTop <= 0 && diff > 0) {
-          e.preventDefault();
-          this.bottomSheet.style.transform = `translateY(${diff}px)`;
-        }
+        // 内容区已滚动且下拉 → 交还给列表滚动，不操作面板
+        if (deltaY > 0 && !atTop) return;
+        // 面板已到最大且上拉 → 交还给列表滚动
+        if (deltaY < 0 && !atTop && sheetStartH >= this.getSheetSnap().max) return;
+
+        // 拖拽面板：阻止原生滚动（仅在可取消时，避免 [Intervention] 警告）
+        if (e.cancelable) e.preventDefault();
+        sheetDragging = true;
+
+        // 上拉(deltaY<0)→变高显示更多；下拉→变矮
+        const snaps = this.getSheetSnap();
+        let newH = sheetStartH - deltaY;
+        newH = Math.max(snaps.min, Math.min(snaps.max, newH));
+        this.setSheetHeight(newH);
       }, { passive: false });
 
-      this.bottomSheet.addEventListener('touchend', () => {
-        const diff = currentY - startY;
-        this.bottomSheet.style.transform = '';
+      const snapToNearest = () => {
+        const snaps = this.getSheetSnap();
+        const candidates = [snaps.max, snaps.def, snaps.min];
+        const curH = this.bottomSheet.offsetHeight;
+        let best = snaps.def;
+        let bestDist = Infinity;
+        candidates.forEach(s => {
+          const d = Math.abs(s - curH);
+          if (d < bestDist) { bestDist = d; best = s; }
+        });
+        this.setSheetHeight(best);
+      };
 
-        if (diff > 100) {
-          this.closeBottomSheet();
+      this.bottomSheet.addEventListener('touchend', (e) => {
+        if (sheetDragging) {
+          sheetDragging = false;
+          const endY = e.changedTouches[0] ? e.changedTouches[0].clientY : sheetStartY;
+          const deltaY = endY - sheetStartY;
+          this.bottomSheet.style.transition = '';
+
+          // 快速下拉超过阈值 → 关闭
+          if (deltaY > 140 && sheetContent && sheetContent.scrollTop <= 0) {
+            this.closeBottomSheet();
+            return;
+          }
+          // 否则吸附到最近档位
+          this.bottomSheet.style.transition = 'height 0.25s cubic-bezier(0.32, 0.72, 0, 1)';
+          snapToNearest();
+          setTimeout(() => {
+            if (this.bottomSheet) this.bottomSheet.style.transition = '';
+          }, 260);
         }
-      });
+      }, { passive: true });
     }
   }
 

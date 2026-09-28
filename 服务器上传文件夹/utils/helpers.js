@@ -113,7 +113,8 @@ export function stripHtml(str) {
 
 /**
  * HTML转义，防止XSS攻击
- * 将 &, <, >, ", ', / 转义为HTML实体
+ * 将 &, <, >, ", ' 转义为HTML实体
+ * 注意：不转义 /，避免破坏 src/href 中的 URL 路径
  * @param {string} str - 原始字符串
  * @returns {string} 转义后的安全字符串
  */
@@ -124,8 +125,7 @@ export function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 }
 
 /**
