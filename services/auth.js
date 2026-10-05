@@ -3,6 +3,7 @@ import { generateUUID } from '../utils/helpers.js';
 import { loggerService } from './logger.js';
 import { apiService } from './api.js';
 import { sensitiveWordService } from './sensitive-word.js';
+import { getFdi } from '../js/fdi.js';
 
 function createResponse(success, data = null, message = '', statusCode = 200) {
   return { success, data, message, statusCode };
@@ -20,15 +21,72 @@ export const UserRoles = {
 
 const DEV_ADMIN_UIDS = ['10281028'];
 
+async function restoreOwnExpiredBan() {
+  try {
+    await supabase.rpc('restore_own_expired_ban');
+  } catch (e) {
+    // 到期写回失败时仍以 auth_account_is_usable 为准
+  }
+}
+
+async function isAccountUsable() {
+  try {
+    const { data, error } = await supabase.rpc('auth_account_is_usable');
+    if (error) {
+      return false;
+    }
+    return data === true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export const authService = {
   _generateVirtualEmail(uid) {
     return `${uid}@campus-forum.local`;
+  },
+
+  _checkClientRateLimit(bucketKey, limit, windowMs) {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return { allowed: true };
+      }
+      const storageKey = `rate:${bucketKey}`;
+      const now = Date.now();
+      let entries = [];
+      try {
+        entries = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+      } catch (e) {
+        entries = [];
+      }
+      if (!Array.isArray(entries)) entries = [];
+      entries = entries.filter((ts) => typeof ts === 'number' && now - ts < windowMs);
+      if (entries.length >= limit) {
+        const waitSec = Math.max(1, Math.ceil((windowMs - (now - entries[0])) / 1000));
+        return { allowed: false, waitSec };
+      }
+      entries.push(now);
+      sessionStorage.setItem(storageKey, JSON.stringify(entries));
+      return { allowed: true };
+    } catch (e) {
+      // 限流存储异常时不阻断正常登录/查询
+      return { allowed: true };
+    }
   },
 
   async login(uid, password) {
     try {
       if (!uid || typeof uid !== 'string' || !/^\d{8}$/.test(uid)) {
         return createResponse(false, null, '请输入有效的8位UID', 400);
+      }
+
+      const rate = this._checkClientRateLimit(
+        `login:${uid}`,
+        config.loginRateLimit || 5,
+        config.loginRateLimitWindowMs || 60000
+      );
+      if (!rate.allowed) {
+        return createResponse(false, null, `尝试过于频繁，请 ${rate.waitSec} 秒后再试`, 429);
       }
 
       const email = this._generateVirtualEmail(uid);
@@ -51,6 +109,20 @@ export const authService = {
         return createResponse(false, null, '登录失败，无法获取用户信息', 401);
       }
 
+      const { data: banned, error: banError } = await supabase.rpc('uid_has_active_ban', {
+        p_uid: uid
+      });
+      if (banError) {
+        await supabase.auth.signOut();
+        return createResponse(false, null, '无法确认账号状态，请稍后重试', 500);
+      }
+      if (banned === true) {
+        await supabase.auth.signOut();
+        return createResponse(false, null, '该账号已被封禁，暂时无法登录', 403);
+      }
+
+      await restoreOwnExpiredBan();
+
       await loggerService.logLogin(user.id, 'success', { uid });
 
       return createResponse(true, { user, session }, '登录成功', 200);
@@ -63,6 +135,15 @@ export const authService = {
 
   async findAccountsByIdentity(identityData) {
     try {
+      const rate = this._checkClientRateLimit(
+        'findAccounts',
+        config.loginRateLimit || 5,
+        config.loginRateLimitWindowMs || 60000
+      );
+      if (!rate.allowed) {
+        return createResponse(false, null, `查询过于频繁，请 ${rate.waitSec} 秒后再试`, 429);
+      }
+
       const filter = {
         student_type: identityData.student_type,
         branch: identityData.branch,
@@ -101,23 +182,38 @@ export const authService = {
 
   async register(password, nickname = '', additionalData = {}) {
     try {
+      const { data: blocked, error: blockError } = await supabase.rpc('registration_is_blocked', {
+        p_fdi: getFdi(),
+        p_student_type: additionalData.student_type || 'school',
+        p_branch: additionalData.branch || null,
+        p_grade: additionalData.grade || null,
+        p_cohort: additionalData.cohort ?? null,
+        p_class_number: additionalData.class_number ?? null,
+        p_student_number: additionalData.student_number ?? null
+      });
+      if (blockError) {
+        return createResponse(false, null, '无法完成注册校验，请稍后重试', 500);
+      }
+      if (blocked === true) {
+        return createResponse(false, null, '当前无法完成注册。如有疑问请联系管理员。', 403);
+      }
+
+      // 保险策略：UID 必须由服务端 RPC 唯一生成；禁止前端随机降级，避免撞号
       let uid;
       try {
         const { data: uidData, error: uidError } = await supabase.rpc('generate_unique_uid');
         if (uidError) {
           console.error('[UID生成] RPC错误:', uidError.message, '| code:', uidError.code, '| details:', uidError.details);
-          uid = this._generateUidFallback();
-          console.warn('[UID生成] 使用前端降级方案生成UID:', uid);
-        } else if (!uidData) {
-          console.error('[UID生成] RPC返回空数据');
-          uid = this._generateUidFallback();
-        } else {
-          uid = uidData;
+          return createResponse(false, null, 'UID 生成失败，请稍后重试', 503);
         }
+        if (!uidData) {
+          console.error('[UID生成] RPC返回空数据');
+          return createResponse(false, null, 'UID 生成失败，请稍后重试', 503);
+        }
+        uid = uidData;
       } catch (e) {
         console.error('[UID生成] 异常:', e.message);
-        uid = this._generateUidFallback();
-        console.warn('[UID生成] 使用前端降级方案生成UID:', uid);
+        return createResponse(false, null, 'UID 生成失败，请稍后重试', 503);
       }
 
       const email = this._generateVirtualEmail(uid);
@@ -164,14 +260,6 @@ export const authService = {
     }
   },
 
-  _generateUidFallback() {
-    let uid;
-    do {
-      uid = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
-    } while (uid === '00000000');
-    return uid;
-  },
-
   async checkDuplicateIdentity(identityData) {
     try {
       const { data, error } = await supabase.rpc('check_duplicate_identity', {
@@ -215,6 +303,12 @@ export const authService = {
 
       if (!user) {
         return createResponse(false, null, '未登录', 401);
+      }
+
+      await restoreOwnExpiredBan();
+      if (!(await isAccountUsable())) {
+        await supabase.auth.signOut();
+        return createResponse(false, null, '该账号已被封禁，暂时无法使用', 403);
       }
 
       const uid = user.user_metadata?.uid || '';
@@ -272,7 +366,7 @@ export const authService = {
         return { allowed: false, reason: '无法获取用户信息' };
       }
 
-      if (profile.account_status !== 'active') {
+      if (!(await isAccountUsable())) {
         return { allowed: false, reason: '账号已被封禁或禁用' };
       }
 
@@ -302,7 +396,7 @@ export const authService = {
         return { allowed: false, reason: '无法获取用户信息' };
       }
 
-      if (profile.account_status !== 'active') {
+      if (!(await isAccountUsable())) {
         return { allowed: false, reason: '账号已被封禁或禁用' };
       }
 
@@ -332,7 +426,15 @@ export const authService = {
   async isLoggedIn() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      return !!user;
+      if (!user) {
+        return false;
+      }
+      await restoreOwnExpiredBan();
+      if (!(await isAccountUsable())) {
+        await supabase.auth.signOut();
+        return false;
+      }
+      return true;
     } catch (error) {
       return false;
     }
@@ -342,6 +444,11 @@ export const authService = {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
+      await restoreOwnExpiredBan();
+      if (!(await isAccountUsable())) {
+        await supabase.auth.signOut();
+        return false;
+      }
       const uid = user.user_metadata?.uid || '';
       if (DEV_ADMIN_UIDS.includes(uid)) return true;
       let profile = null;
@@ -359,6 +466,11 @@ export const authService = {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
+      await restoreOwnExpiredBan();
+      if (!(await isAccountUsable())) {
+        await supabase.auth.signOut();
+        return false;
+      }
       const uid = user.user_metadata?.uid || '';
       if (DEV_ADMIN_UIDS.includes(uid)) return true;
       let profile = null;
@@ -481,8 +593,22 @@ export const authService = {
 
   async updateUserMetadata(metadata) {
     try {
+      // 仅允许公开资料字段同步到 Auth metadata，禁止改写 uid/role 等敏感键
+      const allowedKeys = ['nickname', 'bio', 'signature', 'avatar'];
+      const safeMetadata = {};
+      if (metadata && typeof metadata === 'object') {
+        for (const key of allowedKeys) {
+          if (Object.prototype.hasOwnProperty.call(metadata, key)) {
+            safeMetadata[key] = metadata[key];
+          }
+        }
+      }
+      if (Object.keys(safeMetadata).length === 0) {
+        return createResponse(false, null, '没有可更新的资料字段', 400);
+      }
+
       const { data, error } = await supabase.auth.updateUser({
-        data: metadata
+        data: safeMetadata
       });
       if (error) {
         return createResponse(false, null, error.message, error.status || 400);

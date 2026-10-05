@@ -573,6 +573,9 @@ class RegisterPage {
     if (message.includes('network') || message.includes('fetch')) {
       return '网络异常，请检查网络连接';
     }
+    if (message.includes('无法完成注册')) {
+      return '当前无法完成注册。如有疑问请联系管理员。';
+    }
     return message;
   }
 

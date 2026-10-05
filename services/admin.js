@@ -46,15 +46,13 @@ export const adminService = {
   },
 
   /**
-   * 批准密码重置请求
+   * 批准密码重置请求（7 天资格，不设置用户密码）
    * @param {string} requestId - 请求ID
-   * @param {string} tempPassword - 临时密码
    */
-  async approvePasswordReset(requestId, tempPassword) {
+  async approvePasswordReset(requestId) {
     try {
       const response = await api.rpc('admin_approve_password_reset', {
-        p_request_id: requestId,
-        p_temp_password: tempPassword
+        p_request_id: requestId
       });
 
       if (!response.success) {

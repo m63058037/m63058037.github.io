@@ -42,6 +42,20 @@ class ForgotPasswordPage {
     this.init();
   }
 
+  isResetEligible(data) {
+    if (!data || data.status !== 'approved') {
+      return false;
+    }
+    if (!data.expires_at) {
+      return false;
+    }
+    const expires = new Date(data.expires_at);
+    if (Number.isNaN(expires.getTime())) {
+      return false;
+    }
+    return expires.getTime() > Date.now();
+  }
+
   init() {
     this.bindEvents();
     this.fpUidInput.focus();
@@ -115,7 +129,12 @@ class ForgotPasswordPage {
           return;
         }
         if (status === 'approved') {
-          this.showStep('stepApproved');
+          if (this.isResetEligible(statusResponse.data)) {
+            this.showStep('stepApproved');
+            return;
+          }
+          this.showStep('stepInput');
+          this.showSnackbar('重置资格已过期，请重新申请');
           return;
         }
         if (status === 'rejected') {
@@ -157,7 +176,12 @@ class ForgotPasswordPage {
       if (response.success && response.data) {
         const status = response.data.status;
         if (status === 'approved') {
-          this.showStep('stepApproved');
+          if (this.isResetEligible(response.data)) {
+            this.showStep('stepApproved');
+          } else {
+            this.showStep('stepInput');
+            this.showSnackbar('重置资格已过期，请重新申请');
+          }
         } else if (status === 'rejected') {
           this.showStep('stepRejected');
         } else if (status === 'pending') {
@@ -254,6 +278,13 @@ class ForgotPasswordPage {
     this.resetPasswordBtn.querySelector('.button-text').textContent = '重置中...';
 
     try {
+      const statusResponse = await authService.checkPasswordResetStatus(this.currentUid);
+      if (!statusResponse.success || !this.isResetEligible(statusResponse.data)) {
+        this.showStep('stepInput');
+        this.showSnackbar('重置资格无效或已过期，请重新申请');
+        return;
+      }
+
       const newPassword = this.newPasswordInput.value;
       const response = await authService.resetPasswordWithApproval(this.currentUid, newPassword);
 

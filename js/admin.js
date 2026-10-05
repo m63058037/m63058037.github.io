@@ -857,47 +857,18 @@ class AdminPage {
       title: '批准密码重置',
       content: `
         <p style="margin-bottom: 1rem; color: var(--md-sys-color-on-surface-variant); font-size: 0.875rem;">
-          为学号 <strong style="color: var(--md-sys-color-on-surface);">${this.escapeHtml(uid)}</strong> 设置临时密码
+          确认批准 UID <strong style="color: var(--md-sys-color-on-surface);">${this.escapeHtml(uid)}</strong> 的密码重置申请。
         </p>
-        <div class="form-group">
-          <label style="display: block; font-size: 0.875rem; color: var(--md-sys-color-on-surface-variant); margin-bottom: 0.5rem;">临时密码</label>
-          <input type="text" id="tempPasswordInput" placeholder="请输入临时密码" style="
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--md-sys-color-outline);
-            border-radius: 0.5rem;
-            font-size: 1rem;
-            font-family: inherit;
-            background-color: var(--md-sys-color-surface);
-            color: var(--md-sys-color-on-surface);
-            box-sizing: border-box;
-          ">
-          <p style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); margin-top: 0.5rem;">
-            密码至少需要2个英文字母和6个数字
-          </p>
-        </div>
+        <p style="margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: 0.875rem;">
+          批准后用户将获得 7 天有效资格，自行设置新密码。管理员无法查看或设置用户密码。
+        </p>
       `,
       confirmText: '确认批准',
       confirmType: 'primary',
-      onConfirm: async (dialog) => {
-        const input = dialog.querySelector('#tempPasswordInput');
-        const tempPassword = input.value.trim();
-
-        if (!tempPassword) {
-          this.showSnackbar('请输入临时密码');
-          return false;
-        }
-
-        const letterCount = (tempPassword.match(/[a-zA-Z]/g) || []).length;
-        const digitCount = (tempPassword.match(/[0-9]/g) || []).length;
-        if (letterCount < 2 || digitCount < 6) {
-          this.showSnackbar('密码至少需要2个英文字母和6个数字');
-          return false;
-        }
-
-        const response = await adminService.approvePasswordReset(requestId, tempPassword);
+      onConfirm: async () => {
+        const response = await adminService.approvePasswordReset(requestId);
         if (response.success) {
-          this.showSnackbar('密码重置已批准');
+          this.showSnackbar('密码重置已批准，用户需在 7 天内自行设置新密码');
           this.loadPasswordResetList();
           this.loadUnreadNotifications();
           return true;
