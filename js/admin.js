@@ -25,6 +25,9 @@ class AdminPage {
     this.currentSection = 'dashboard';
     this.passwordResetTab = 'pending';
     this.reportsTab = 'pending';
+    this.penaltyHistoryPage = 1;
+    this.auditLogsPage = 1;
+    this.l4HitsTab = 'pending';
     // 公告编辑内容缓存：避免把长文塞进 data-* 属性
     this.announcementEditCache = new Map();
     this.themeDraft = null;
@@ -115,6 +118,11 @@ class AdminPage {
     return false;
   }
 
+  isDevAdminOnlySection(section) {
+    return section === 'announcements' || section === 'theme-ui'
+      || section === 'admin-roles' || section === 'sensitive-l4';
+  }
+
   /**
    * 根据角色设置侧边栏可见性
    */
@@ -123,7 +131,8 @@ class AdminPage {
     // 对普通管理员隐藏「公告管理」整个分组（含 header + nav-item），
     // 避免仅隐藏 header 导致 nav-item 悬浮显示。不用 :has()（兼容性不稳）。
     this.navItems.forEach(item => {
-      if ((item.dataset.section === 'announcements' || item.dataset.section === 'theme-ui') && !isDevAdmin) {
+      if ((item.dataset.section === 'announcements' || item.dataset.section === 'theme-ui'
+        || item.dataset.section === 'admin-roles' || item.dataset.section === 'sensitive-l4') && !isDevAdmin) {
         item.style.display = 'none';
       }
     });
@@ -354,7 +363,7 @@ class AdminPage {
         const section = item.dataset.section;
         if (!section) return;
         // 普通管理员不能访问公告管理
-        if ((section === 'announcements' || section === 'theme-ui') && this.userRole !== UserRoles.DEV_ADMIN) {
+        if (this.isDevAdminOnlySection(section) && this.userRole !== UserRoles.DEV_ADMIN) {
           this.showSnackbar('您没有权限访问此功能');
           return;
         }
@@ -454,7 +463,7 @@ class AdminPage {
   handleHashChange() {
     const hash = window.location.hash.replace('#', '') || 'dashboard';
     // 权限检查
-    if ((hash === 'announcements' || hash === 'theme-ui') && this.userRole !== UserRoles.DEV_ADMIN) {
+    if (this.isDevAdminOnlySection(hash) && this.userRole !== UserRoles.DEV_ADMIN) {
       this.switchSection('dashboard');
       return;
     }
@@ -497,6 +506,11 @@ class AdminPage {
       'dashboard': '总览',
       'password-reset': '忘记密码审核',
       'reports': '举报审核',
+      'account-penalty': '处罚与解封',
+      'penalty-history': '处罚历史',
+      'audit-logs': '审计日志',
+      'admin-roles': '管理员管理',
+      'sensitive-l4': '敏感词 L4',
       'announcements': '公告管理',
       'theme-ui': 'UI 颜色系统'
     };
@@ -523,6 +537,21 @@ class AdminPage {
         break;
       case 'reports':
         this.renderReports();
+        break;
+      case 'account-penalty':
+        this.renderAccountPenalty();
+        break;
+      case 'penalty-history':
+        this.renderPenaltyHistory();
+        break;
+      case 'audit-logs':
+        this.renderAuditLogs();
+        break;
+      case 'admin-roles':
+        this.renderAdminRoles();
+        break;
+      case 'sensitive-l4':
+        this.renderSensitiveL4();
         break;
       case 'announcements':
         this.renderAnnouncements();
@@ -1265,6 +1294,517 @@ class AdminPage {
         }
       }
     });
+  }
+
+  // ==================== 账户处罚 ====================
+
+  fieldStyle() {
+    return `width:100%;padding:0.75rem 1rem;border:1px solid var(--md-sys-color-outline);border-radius:0.5rem;font-size:1rem;font-family:inherit;background-color:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);box-sizing:border-box;`;
+  }
+
+  renderAccountPenalty() {
+    const isDev = this.userRole === UserRoles.DEV_ADMIN;
+    this.adminContent.innerHTML = `
+      <div class="admin-section" style="max-width:720px;">
+        <h3 style="margin:0 0 1rem;font-size:1.25rem;font-weight:500;">处罚账户</h3>
+        <p style="margin:0 0 1rem;font-size:0.875rem;color:var(--md-sys-color-on-surface-variant);">权限由服务端校验。请先加载帖子并至少勾选一篇作为证据。结束时间由服务器按叠加规则计算。</p>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label style="display:block;font-size:0.875rem;margin-bottom:0.35rem;">目标 UID</label>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <input id="penaltyTargetUid" maxlength="8" placeholder="8位数字UID" style="${this.fieldStyle()};flex:1;min-width:160px;">
+            <button type="button" class="btn-secondary" id="penaltyLoadPostsBtn">加载帖子</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label style="display:block;font-size:0.875rem;margin-bottom:0.35rem;">处罚类型</label>
+          <select id="penaltyType" style="${this.fieldStyle()}">
+            <option value="temporary">临时封禁</option>
+            ${isDev ? '<option value="permanent">永久封禁</option>' : ''}
+          </select>
+        </div>
+        <div class="form-group" id="penaltyDurationWrap" style="margin-bottom:0.75rem;">
+          <label style="display:block;font-size:0.875rem;margin-bottom:0.35rem;">临时封禁时长</label>
+          <select id="penaltyDuration" style="${this.fieldStyle()}">
+            <option value="1h">1 小时</option>
+            <option value="3h">3 小时</option>
+            <option value="1d">1 天</option>
+            <option value="3d">3 天</option>
+            <option value="7d">7 天</option>
+            <option value="1m">1 个月</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label style="display:block;font-size:0.875rem;margin-bottom:0.35rem;">处罚理由</label>
+          <textarea id="penaltyReason" rows="3" placeholder="必填" style="${this.fieldStyle()};resize:vertical;"></textarea>
+        </div>
+        <div id="penaltyPostList" style="margin-bottom:1rem;font-size:0.875rem;color:var(--md-sys-color-on-surface-variant);">请先加载该 UID 的帖子。</div>
+        <button type="button" class="btn-primary" id="penaltySubmitBtn">确认并处罚</button>
+
+        <h3 style="margin:2rem 0 1rem;font-size:1.25rem;font-weight:500;">解除临时封禁</h3>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <input id="liftTempUid" maxlength="8" placeholder="目标 UID" style="${this.fieldStyle()};margin-bottom:0.5rem;">
+          <textarea id="liftTempReason" rows="2" placeholder="解封理由（必填）" style="${this.fieldStyle()};resize:vertical;margin-bottom:0.5rem;"></textarea>
+          <button type="button" class="btn-secondary" id="liftTempBtn">解除临时封禁</button>
+        </div>
+        ${isDev ? `
+        <h3 style="margin:2rem 0 1rem;font-size:1.25rem;font-weight:500;color:var(--md-sys-color-error);">解除永久封禁</h3>
+        <div class="form-group">
+          <input id="liftPermUid" maxlength="8" placeholder="目标 UID" style="${this.fieldStyle()};margin-bottom:0.5rem;">
+          <textarea id="liftPermReason" rows="2" placeholder="恢复理由（必填）" style="${this.fieldStyle()};resize:vertical;margin-bottom:0.5rem;"></textarea>
+          <button type="button" class="btn-danger" id="liftPermBtn" style="background:var(--md-sys-color-error);color:var(--md-sys-color-on-error);border:none;padding:0.625rem 1.25rem;border-radius:0.5rem;cursor:pointer;">解除永久封禁</button>
+        </div>` : ''}
+      </div>
+    `;
+    this.bindAccountPenaltyEvents();
+  }
+
+  bindAccountPenaltyEvents() {
+    const typeSel = document.getElementById('penaltyType');
+    const durWrap = document.getElementById('penaltyDurationWrap');
+    if (typeSel && durWrap) {
+      typeSel.addEventListener('change', () => {
+        durWrap.style.display = typeSel.value === 'permanent' ? 'none' : '';
+      });
+    }
+    const loadBtn = document.getElementById('penaltyLoadPostsBtn');
+    if (loadBtn) loadBtn.addEventListener('click', () => this.loadPenaltyPosts());
+    const submitBtn = document.getElementById('penaltySubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', () => this.confirmApplyPenalty());
+    const liftTempBtn = document.getElementById('liftTempBtn');
+    if (liftTempBtn) liftTempBtn.addEventListener('click', () => this.confirmLiftTemporary());
+    const liftPermBtn = document.getElementById('liftPermBtn');
+    if (liftPermBtn) liftPermBtn.addEventListener('click', () => this.confirmLiftPermanent());
+  }
+
+  async loadPenaltyPosts() {
+    const uid = (document.getElementById('penaltyTargetUid')?.value || '').trim();
+    const box = document.getElementById('penaltyPostList');
+    if (!/^\d{8}$/.test(uid)) {
+      this.showSnackbar('请输入有效的8位UID');
+      return;
+    }
+    box.textContent = '加载中...';
+    const response = await adminService.listUserPosts(uid);
+    if (!response.success) {
+      box.textContent = response.error || '加载失败';
+      return;
+    }
+    const rows = response.data || [];
+    if (rows.length === 0) {
+      box.textContent = '该 UID 没有可作为证据的帖子。';
+      return;
+    }
+    box.innerHTML = rows.map(p => `
+      <label style="display:flex;gap:0.5rem;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--md-sys-color-outline-variant);">
+        <input type="checkbox" class="penalty-post-cb" value="${this.escapeHtml(p.id || '')}">
+        <span>
+          <strong>${this.escapeHtml(p.title || '无标题')}</strong>
+          <span style="color:var(--md-sys-color-on-surface-variant);"> · ${this.formatTime(p.created_at)}${p.is_deleted ? ' · 已删除' : ''}</span>
+        </span>
+      </label>
+    `).join('');
+  }
+
+  selectedPenaltyPostIds() {
+    return Array.from(this.adminContent.querySelectorAll('.penalty-post-cb:checked')).map(el => el.value).filter(Boolean);
+  }
+
+  durationLabel(code) {
+    return { '1h': '1小时', '3h': '3小时', '1d': '1天', '3d': '3天', '7d': '7天', '1m': '1个月' }[code] || code;
+  }
+
+  confirmApplyPenalty() {
+    const uid = (document.getElementById('penaltyTargetUid')?.value || '').trim();
+    const type = document.getElementById('penaltyType')?.value;
+    const duration = document.getElementById('penaltyDuration')?.value || null;
+    const reason = (document.getElementById('penaltyReason')?.value || '').trim();
+    const postIds = this.selectedPenaltyPostIds();
+    if (!/^\d{8}$/.test(uid)) {
+      this.showSnackbar('请输入有效的8位UID');
+      return;
+    }
+    if (!reason) {
+      this.showSnackbar('请填写处罚理由');
+      return;
+    }
+    if (postIds.length < 1) {
+      this.showSnackbar('请至少勾选一篇违规帖子');
+      return;
+    }
+    const isPermanent = type === 'permanent';
+    const durationText = isPermanent ? '永久' : this.durationLabel(duration);
+    this.showDialog({
+      title: isPermanent ? '确认永久封禁' : '确认处罚',
+      confirmText: isPermanent ? '确认永久封禁' : '确认处罚',
+      confirmType: isPermanent ? 'danger' : 'primary',
+      content: `
+        ${isPermanent ? '<p style="color:var(--md-sys-color-error);font-weight:500;margin:0 0 0.75rem;">高风险操作：永久封禁无法被普通管理员解除。</p>' : ''}
+        <p style="margin:0 0 0.5rem;font-size:0.875rem;">目标 UID：<strong>${this.escapeHtml(uid)}</strong></p>
+        <p style="margin:0 0 0.5rem;font-size:0.875rem;">类型：${isPermanent ? '永久封禁' : '临时封禁'}</p>
+        <p style="margin:0 0 0.5rem;font-size:0.875rem;">时长：${this.escapeHtml(durationText)}${isPermanent ? '' : '（若目标仍在有效临时封禁中，服务器将从现有到期时间叠加）'}</p>
+        <p style="margin:0 0 0.5rem;font-size:0.875rem;">违规帖子：${postIds.length} 篇</p>
+        <p style="margin:0;font-size:0.875rem;">理由：${this.escapeHtml(reason)}</p>
+      `,
+      onConfirm: async () => {
+        const response = await adminService.applyPenalty(
+          uid,
+          type,
+          isPermanent ? null : duration,
+          reason,
+          postIds
+        );
+        if (response.success) {
+          this.showSnackbar('处罚已执行');
+          this.penaltyHistoryPage = 1;
+          return true;
+        }
+        this.showSnackbar(response.error || '处罚失败');
+        return false;
+      }
+    });
+  }
+
+  confirmLiftTemporary() {
+    const uid = (document.getElementById('liftTempUid')?.value || '').trim();
+    const reason = (document.getElementById('liftTempReason')?.value || '').trim();
+    if (!/^\d{8}$/.test(uid) || !reason) {
+      this.showSnackbar('请填写目标 UID 和解封理由');
+      return;
+    }
+    this.showDialog({
+      title: '确认解除临时封禁',
+      confirmText: '确认解封',
+      content: `<p style="font-size:0.875rem;margin:0;">解除 UID <strong>${this.escapeHtml(uid)}</strong> 的临时封禁。</p>`,
+      onConfirm: async () => {
+        const response = await adminService.liftTemporaryBan(uid, reason);
+        if (response.success) {
+          this.showSnackbar('已解除临时封禁');
+          return true;
+        }
+        this.showSnackbar(response.error || '解封失败');
+        return false;
+      }
+    });
+  }
+
+  confirmLiftPermanent() {
+    if (this.userRole !== UserRoles.DEV_ADMIN) return;
+    const uid = (document.getElementById('liftPermUid')?.value || '').trim();
+    const reason = (document.getElementById('liftPermReason')?.value || '').trim();
+    if (!/^\d{8}$/.test(uid) || !reason) {
+      this.showSnackbar('请填写目标 UID 和恢复理由');
+      return;
+    }
+    this.showDialog({
+      title: '确认解除永久封禁',
+      confirmText: '确认恢复',
+      confirmType: 'danger',
+      content: `<p style="color:var(--md-sys-color-error);font-size:0.875rem;margin:0;">将恢复 UID <strong>${this.escapeHtml(uid)}</strong> 的永久封禁状态。</p>`,
+      onConfirm: async () => {
+        const response = await adminService.liftPermanentBan(uid, reason);
+        if (response.success) {
+          this.showSnackbar('已解除永久封禁');
+          return true;
+        }
+        this.showSnackbar(response.error || '恢复失败');
+        return false;
+      }
+    });
+  }
+
+  renderPenaltyHistory() {
+    this.adminContent.innerHTML = `
+      <div class="admin-section">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <input id="historyUid" maxlength="8" placeholder="按目标 UID 筛选（可空）" style="${this.fieldStyle()};max-width:240px;">
+          <button type="button" class="btn-primary" id="historySearchBtn">查询</button>
+        </div>
+        <div id="penaltyHistoryList"></div>
+      </div>
+    `;
+    document.getElementById('historySearchBtn')?.addEventListener('click', () => {
+      this.penaltyHistoryPage = 1;
+      this.loadPenaltyHistory();
+    });
+    this.loadPenaltyHistory();
+  }
+
+  async loadPenaltyHistory() {
+    const box = document.getElementById('penaltyHistoryList');
+    if (!box) return;
+    box.innerHTML = this.renderLoading('正在加载处罚历史...');
+    const uid = (document.getElementById('historyUid')?.value || '').trim() || null;
+    const response = await adminService.listPenalties(uid, this.penaltyHistoryPage, 20);
+    if (!response.success) {
+      box.innerHTML = this.renderErrorState(response.error || '加载失败', () => this.loadPenaltyHistory());
+      return;
+    }
+    const rows = response.data || [];
+    if (rows.length === 0) {
+      box.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant);">暂无处罚记录</p>';
+      return;
+    }
+    const total = rows[0].total_count || rows.length;
+    box.innerHTML = rows.map(item => `
+      <div class="admin-list-item" style="padding:1rem;margin-bottom:0.75rem;background:var(--md-sys-color-surface-container);border-radius:0.75rem;">
+        <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;font-size:0.875rem;">
+          <strong>目标 ${this.escapeHtml(item.target_uid || '')}</strong>
+          <span>${this.escapeHtml(item.penalty_type || '')} · ${this.escapeHtml(item.source || '')}</span>
+        </div>
+        <div style="font-size:0.8125rem;color:var(--md-sys-color-on-surface-variant);margin-top:0.35rem;">
+          执行 ${this.escapeHtml(item.actor_uid || '')} (${this.escapeHtml(item.actor_role || '')})
+          · 开始 ${this.formatTime(item.starts_at)}
+          · 结束 ${item.ends_at ? this.formatTime(item.ends_at) : '永久/无'}
+          ${item.lifted_at ? ' · 已解封 ' + this.formatTime(item.lifted_at) : ''}
+        </div>
+        <div style="margin-top:0.35rem;font-size:0.875rem;">${this.escapeHtml(item.reason || '')}</div>
+        <button type="button" class="btn-secondary penalty-evidence-btn" data-id="${item.id}" style="margin-top:0.5rem;">查看证据</button>
+      </div>
+    `).join('') + `<p style="font-size:0.75rem;color:var(--md-sys-color-on-surface-variant);">第 ${this.penaltyHistoryPage} 页 · 共 ${total} 条</p>
+      <div style="display:flex;gap:0.5rem;">
+        <button type="button" class="btn-secondary" id="historyPrev" ${this.penaltyHistoryPage <= 1 ? 'disabled' : ''}>上一页</button>
+        <button type="button" class="btn-secondary" id="historyNext" ${rows.length < 20 ? 'disabled' : ''}>下一页</button>
+      </div>`;
+    box.querySelectorAll('.penalty-evidence-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.showPenaltyPosts(btn.dataset.id));
+    });
+    document.getElementById('historyPrev')?.addEventListener('click', () => {
+      if (this.penaltyHistoryPage > 1) {
+        this.penaltyHistoryPage -= 1;
+        this.loadPenaltyHistory();
+      }
+    });
+    document.getElementById('historyNext')?.addEventListener('click', () => {
+      this.penaltyHistoryPage += 1;
+      this.loadPenaltyHistory();
+    });
+  }
+
+  async showPenaltyPosts(penaltyId) {
+    const response = await adminService.listPenaltyPosts(penaltyId);
+    if (!response.success) {
+      this.showSnackbar(response.error || '无法加载证据');
+      return;
+    }
+    const rows = response.data || [];
+    const body = rows.length === 0
+      ? '<p>无证据帖子</p>'
+      : rows.map(p => `<p style="font-size:0.875rem;margin:0 0 0.5rem;">${this.escapeHtml(p.post_id)} · ${this.escapeHtml(p.title || '无标题')}${p.was_deleted ? ' · 已删除' : ''}</p>`).join('');
+    this.showDialog({
+      title: '处罚证据',
+      content: body,
+      confirmText: '关闭',
+      onConfirm: async () => true
+    });
+  }
+
+  renderAuditLogs() {
+    this.adminContent.innerHTML = `
+      <div class="admin-section">
+        <p style="font-size:0.875rem;color:var(--md-sys-color-on-surface-variant);margin:0 0 1rem;">日志范围由服务端按角色过滤，前端不做扩大。</p>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <input id="auditTargetUid" maxlength="8" placeholder="目标 UID" style="${this.fieldStyle()};max-width:160px;">
+          <input id="auditActorUid" maxlength="8" placeholder="操作者 UID" style="${this.fieldStyle()};max-width:160px;">
+          <input id="auditAction" placeholder="action（可空）" style="${this.fieldStyle()};max-width:200px;">
+          <button type="button" class="btn-primary" id="auditSearchBtn">查询</button>
+        </div>
+        <div id="auditLogList"></div>
+      </div>
+    `;
+    document.getElementById('auditSearchBtn')?.addEventListener('click', () => {
+      this.auditLogsPage = 1;
+      this.loadAuditLogs();
+    });
+    this.loadAuditLogs();
+  }
+
+  async loadAuditLogs() {
+    const box = document.getElementById('auditLogList');
+    if (!box) return;
+    box.innerHTML = this.renderLoading('正在加载审计日志...');
+    const filters = {
+      targetUid: (document.getElementById('auditTargetUid')?.value || '').trim() || null,
+      actorUid: (document.getElementById('auditActorUid')?.value || '').trim() || null,
+      action: (document.getElementById('auditAction')?.value || '').trim() || null
+    };
+    const response = await adminService.listAuditLogs(filters, this.auditLogsPage, 20);
+    if (!response.success) {
+      box.innerHTML = this.renderErrorState(response.error || '加载失败', () => this.loadAuditLogs());
+      return;
+    }
+    const rows = response.data || [];
+    if (rows.length === 0) {
+      box.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant);">暂无审计记录</p>';
+      return;
+    }
+    const total = rows[0].total_count || rows.length;
+    box.innerHTML = rows.map(item => `
+      <div class="admin-list-item" style="padding:1rem;margin-bottom:0.75rem;background:var(--md-sys-color-surface-container);border-radius:0.75rem;font-size:0.875rem;">
+        <div><strong>${this.escapeHtml(item.action || '')}</strong> · ${this.formatTime(item.created_at)}</div>
+        <div style="color:var(--md-sys-color-on-surface-variant);margin-top:0.25rem;">操作 ${this.escapeHtml(item.actor_uid || '')} (${this.escapeHtml(item.actor_role || '')}) → 目标 ${this.escapeHtml(item.target_uid || '')}</div>
+      </div>
+    `).join('') + `<p style="font-size:0.75rem;color:var(--md-sys-color-on-surface-variant);">第 ${this.auditLogsPage} 页 · 共 ${total} 条</p>
+      <div style="display:flex;gap:0.5rem;">
+        <button type="button" class="btn-secondary" id="auditPrev" ${this.auditLogsPage <= 1 ? 'disabled' : ''}>上一页</button>
+        <button type="button" class="btn-secondary" id="auditNext" ${rows.length < 20 ? 'disabled' : ''}>下一页</button>
+      </div>`;
+    document.getElementById('auditPrev')?.addEventListener('click', () => {
+      if (this.auditLogsPage > 1) {
+        this.auditLogsPage -= 1;
+        this.loadAuditLogs();
+      }
+    });
+    document.getElementById('auditNext')?.addEventListener('click', () => {
+      this.auditLogsPage += 1;
+      this.loadAuditLogs();
+    });
+  }
+
+  renderAdminRoles() {
+    if (this.denyDevAdminIfNeeded()) return;
+    this.adminContent.innerHTML = `
+      <div class="admin-section" style="max-width:560px;">
+        <p style="font-size:0.875rem;color:var(--md-sys-color-on-surface-variant);">仅可将 member 授予为 admin，或将 admin 撤销为 member。不能设置 dev_admin。</p>
+        <div class="form-group" style="margin:1rem 0;">
+          <label style="display:block;font-size:0.875rem;margin-bottom:0.35rem;">目标 UID</label>
+          <input id="roleTargetUid" maxlength="8" placeholder="8位数字UID" style="${this.fieldStyle()}">
+        </div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button type="button" class="btn-primary" id="grantAdminBtn">授予 admin</button>
+          <button type="button" class="btn-secondary" id="revokeAdminBtn">撤销 admin</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('grantAdminBtn')?.addEventListener('click', () => this.confirmGrantAdmin());
+    document.getElementById('revokeAdminBtn')?.addEventListener('click', () => this.confirmRevokeAdmin());
+  }
+
+  confirmGrantAdmin() {
+    const uid = (document.getElementById('roleTargetUid')?.value || '').trim();
+    if (!/^\d{8}$/.test(uid)) {
+      this.showSnackbar('请输入有效的8位UID');
+      return;
+    }
+    this.showDialog({
+      title: '授予管理员',
+      content: `<p style="font-size:0.875rem;">将 UID <strong>${this.escapeHtml(uid)}</strong> 从 member 提升为 admin。</p>`,
+      confirmText: '确认授予',
+      onConfirm: async () => {
+        const response = await adminService.grantAdmin(uid);
+        if (response.success) {
+          this.showSnackbar('已授予 admin');
+          return true;
+        }
+        this.showSnackbar(response.error || '授予失败');
+        return false;
+      }
+    });
+  }
+
+  confirmRevokeAdmin() {
+    const uid = (document.getElementById('roleTargetUid')?.value || '').trim();
+    if (!/^\d{8}$/.test(uid)) {
+      this.showSnackbar('请输入有效的8位UID');
+      return;
+    }
+    this.showDialog({
+      title: '撤销管理员',
+      confirmType: 'danger',
+      content: `<p style="font-size:0.875rem;">将 UID <strong>${this.escapeHtml(uid)}</strong> 从 admin 降为 member。</p>`,
+      confirmText: '确认撤销',
+      onConfirm: async () => {
+        const response = await adminService.revokeAdmin(uid);
+        if (response.success) {
+          this.showSnackbar('已撤销 admin');
+          return true;
+        }
+        this.showSnackbar(response.error || '撤销失败');
+        return false;
+      }
+    });
+  }
+
+  renderSensitiveL4() {
+    if (this.denyDevAdminIfNeeded()) return;
+    this.adminContent.innerHTML = `
+      <div class="admin-section">
+        <div class="tabs" style="display:flex;gap:0.25rem;margin-bottom:1rem;background-color:var(--md-sys-color-surface-container);padding:0.25rem;border-radius:0.75rem;max-width:360px;">
+          <button type="button" class="l4-tab-btn ${this.l4HitsTab === 'pending' ? 'active' : ''}" data-tab="pending" style="flex:1;padding:0.75rem;border:none;background:${this.l4HitsTab === 'pending' ? 'var(--md-sys-color-primary)' : 'transparent'};color:${this.l4HitsTab === 'pending' ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface-variant)'};border-radius:0.5rem;cursor:pointer;">待处理</button>
+          <button type="button" class="l4-tab-btn ${this.l4HitsTab === 'all' ? 'active' : ''}" data-tab="all" style="flex:1;padding:0.75rem;border:none;background:${this.l4HitsTab === 'all' ? 'var(--md-sys-color-primary)' : 'transparent'};color:${this.l4HitsTab === 'all' ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-surface-variant)'};border-radius:0.5rem;cursor:pointer;">全部 L4</button>
+        </div>
+        <div id="l4HitList"></div>
+      </div>
+    `;
+    this.adminContent.querySelectorAll('.l4-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.l4HitsTab = btn.dataset.tab;
+        this.renderSensitiveL4();
+      });
+    });
+    this.loadSensitiveL4();
+  }
+
+  async loadSensitiveL4() {
+    const box = document.getElementById('l4HitList');
+    if (!box) return;
+    box.innerHTML = this.renderLoading('正在加载 L4 命中...');
+    const status = this.l4HitsTab === 'pending' ? 'pending' : null;
+    const response = await adminService.getSensitiveHits(4, status, 1, 50);
+    if (!response.success) {
+      box.innerHTML = this.renderErrorState(response.error || '加载失败', () => this.loadSensitiveL4());
+      return;
+    }
+    const rows = response.data || [];
+    if (rows.length === 0) {
+      box.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant);">暂无记录</p>';
+      return;
+    }
+    box.innerHTML = rows.map(item => `
+      <div class="admin-list-item" style="padding:1rem;margin-bottom:0.75rem;background:var(--md-sys-color-surface-container);border-radius:0.75rem;">
+        <div style="font-size:0.875rem;"><strong>L${item.level}</strong> ${this.escapeHtml(item.matched_word || '')} · ${this.escapeHtml(item.handle_status || '')}</div>
+        <div style="font-size:0.8125rem;color:var(--md-sys-color-on-surface-variant);margin:0.35rem 0;">${this.escapeHtml(item.user_name || item.user_id || '')} · ${this.escapeHtml(item.content_type || '')} ${this.escapeHtml(item.target_id || '')}</div>
+        <div style="font-size:0.875rem;margin-bottom:0.5rem;">${this.escapeHtml(item.content_summary || '')}</div>
+        ${item.handle_status === 'pending' ? `
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button type="button" class="btn-secondary l4-act" data-id="${item.id}" data-action="resolved">标记已处理</button>
+            <button type="button" class="btn-secondary l4-act" data-id="${item.id}" data-action="ignored">忽略</button>
+            <button type="button" class="btn-primary l4-act" data-id="${item.id}" data-action="ban" style="background:var(--md-sys-color-error);color:var(--md-sys-color-on-error);">L4 永久封禁</button>
+          </div>` : ''}
+      </div>
+    `).join('');
+    box.querySelectorAll('.l4-act').forEach(btn => {
+      btn.addEventListener('click', () => this.confirmHandleL4(btn.dataset.id, btn.dataset.action));
+    });
+  }
+
+  confirmHandleL4(hitId, action) {
+    const labels = { resolved: '标记已处理', ignored: '忽略', ban: '按 L4 永久封禁' };
+    this.showDialog({
+      title: labels[action] || '处置',
+      confirmType: action === 'ban' ? 'danger' : 'primary',
+      confirmText: action === 'ban' ? '确认永久封禁' : '确认',
+      content: action === 'ban'
+        ? '<p style="color:var(--md-sys-color-error);font-size:0.875rem;">将通过服务端 penalty 核心执行永久封禁（理由：敏感词 L4）。</p>'
+        : `<p style="font-size:0.875rem;">确认执行「${labels[action]}」？</p>`,
+      onConfirm: async () => {
+        const response = await adminService.handleSensitiveHit(hitId, action, action);
+        if (response.success) {
+          this.showSnackbar('已处置');
+          this.loadSensitiveL4();
+          return true;
+        }
+        this.showSnackbar(response.error || '处置失败');
+        return false;
+      }
+    });
+  }
+
+  denyDevAdminIfNeeded() {
+    if (this.userRole !== UserRoles.DEV_ADMIN) {
+      this.adminContent.innerHTML = this.renderErrorState('您没有权限访问此功能', () => this.switchSection('dashboard'));
+      return true;
+    }
+    return false;
   }
 
   // ==================== UI 颜色系统（仅 dev_admin） ====================

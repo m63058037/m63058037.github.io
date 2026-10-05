@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { getFdi } from '../js/fdi.js';
 
 export const adminService = {
   /**
@@ -141,6 +142,180 @@ export const adminService = {
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: error.message || '处理举报失败' };
+    }
+  },
+
+  async applyPenalty(targetUid, type, durationCode, reason, postIds) {
+    try {
+      const response = await api.rpc('admin_apply_penalty', {
+        p_target_uid: targetUid,
+        p_type: type,
+        p_duration_code: durationCode,
+        p_reason: reason,
+        p_post_ids: postIds,
+        p_fdi: getFdi()
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '处罚失败' };
+      }
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '处罚失败' };
+    }
+  },
+
+  async liftTemporaryBan(targetUid, reason) {
+    try {
+      const response = await api.rpc('admin_lift_temporary_ban', {
+        p_target_uid: targetUid,
+        p_reason: reason
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '解除临时封禁失败' };
+      }
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '解除临时封禁失败' };
+    }
+  },
+
+  async liftPermanentBan(targetUid, reason) {
+    try {
+      const response = await api.rpc('dev_admin_lift_permanent_ban', {
+        p_target_uid: targetUid,
+        p_reason: reason
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '解除永久封禁失败' };
+      }
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '解除永久封禁失败' };
+    }
+  },
+
+  async listPenalties(targetUid, page = 1, pageSize = 20) {
+    try {
+      const response = await api.rpc('admin_list_penalties', {
+        p_target_uid: targetUid || null,
+        p_actor_uid: null,
+        p_type: null,
+        p_page: page,
+        p_page_size: pageSize
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '获取处罚历史失败' };
+      }
+      return { success: true, data: Array.isArray(response.data) ? response.data : [] };
+    } catch (error) {
+      return { success: false, error: error.message || '获取处罚历史失败' };
+    }
+  },
+
+  async listPenaltyPosts(penaltyId) {
+    try {
+      const response = await api.rpc('admin_list_penalty_posts', {
+        p_penalty_id: penaltyId
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '获取处罚证据失败' };
+      }
+      return { success: true, data: Array.isArray(response.data) ? response.data : [] };
+    } catch (error) {
+      return { success: false, error: error.message || '获取处罚证据失败' };
+    }
+  },
+
+  async listUserPosts(uid) {
+    try {
+      const response = await api.rpc('admin_list_user_posts', {
+        p_uid: uid
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '获取用户帖子失败' };
+      }
+      return { success: true, data: Array.isArray(response.data) ? response.data : [] };
+    } catch (error) {
+      return { success: false, error: error.message || '获取用户帖子失败' };
+    }
+  },
+
+  async listAuditLogs(filters = {}, page = 1, pageSize = 20) {
+    try {
+      const response = await api.rpc('admin_list_audit_logs', {
+        p_target_uid: filters.targetUid || null,
+        p_actor_uid: filters.actorUid || null,
+        p_action: filters.action || null,
+        p_page: page,
+        p_page_size: pageSize
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '获取审计日志失败' };
+      }
+      return { success: true, data: Array.isArray(response.data) ? response.data : [] };
+    } catch (error) {
+      return { success: false, error: error.message || '获取审计日志失败' };
+    }
+  },
+
+  async grantAdmin(targetUid) {
+    try {
+      const response = await api.rpc('dev_admin_grant_admin', {
+        p_target_uid: targetUid
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '授予管理员失败' };
+      }
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '授予管理员失败' };
+    }
+  },
+
+  async revokeAdmin(targetUid) {
+    try {
+      const response = await api.rpc('dev_admin_revoke_admin', {
+        p_target_uid: targetUid
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '撤销管理员失败' };
+      }
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '撤销管理员失败' };
+    }
+  },
+
+  async getSensitiveHits(level, handleStatus, page = 1, pageSize = 20) {
+    try {
+      const response = await api.rpc('admin_sensitive_hits_get', {
+        p_level: level,
+        p_handle_status: handleStatus,
+        p_page: page,
+        p_page_size: pageSize
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '获取敏感词命中失败' };
+      }
+      return { success: true, data: Array.isArray(response.data) ? response.data : [] };
+    } catch (error) {
+      return { success: false, error: error.message || '获取敏感词命中失败' };
+    }
+  },
+
+  async handleSensitiveHit(hitId, action, result) {
+    try {
+      const response = await api.rpc('admin_sensitive_handle_hit', {
+        p_hit_id: hitId,
+        p_action: action,
+        p_result: result || ''
+      });
+      if (!response.success) {
+        return { success: false, error: response.message || '处置敏感词命中失败' };
+      }
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message || '处置敏感词命中失败' };
     }
   },
 
