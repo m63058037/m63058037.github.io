@@ -2,13 +2,15 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>执信论坛 - 登录</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=20260822a">
-  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20260822b">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=20261005a">
+  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20261005a">
 </head>
 <body class="login-page">
   <div class="login-container">
@@ -128,9 +130,7 @@
         <button type="submit" class="login-button" id="loginButton">
           <span class="button-text">登录</span>
           <div class="button-loader" id="buttonLoader">
-            <svg viewBox="25 25 50 50">
-              <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100" class="loader-spinner"/>
-            </svg>
+            <span class="material-symbols-outlined loader-spinner" aria-hidden="true">progress_activity</span>
           </div>
         </button>
       </form>
@@ -175,20 +175,14 @@
         </div>
       </div>
     </div>
-
-    <div class="login-decoration">
-      <div class="decoration-circle circle-1"></div>
-      <div class="decoration-circle circle-2"></div>
-      <div class="decoration-circle circle-3"></div>
-    </div>
   </div>
 
-  <!-- Lottie动画库 -->
+  <footer class="site-footer">© 2026 执信论坛 · +1科创工作室</footer>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
-  <!-- Lottie图标工具库 -->
-  <script src="../js/lottie-icon-utils.js?v=20260822b"></script>
+  <script src="../js/lottie-icon-utils.js?v=20260928i"></script>
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/login.js?v=20260821h"></script>
-<footer class="site-footer">© 2026 执信论坛 · 星夜工作室</footer>
+  <script type="module" src="../js/theme-init.js?v=20261005a"></script>
+  <script type="module" src="../js/login.js?v=20260928i"></script>
 </body>
 </html>

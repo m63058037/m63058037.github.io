@@ -7,8 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=20260822a">
-  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20260822b">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=20261005a">
+  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20261005a">
 </head>
 <body class="search-page">
   <header class="simple-header">
@@ -33,9 +34,7 @@
   <main class="search-content">
     <div class="search-results" id="searchResults">
       <div class="search-loading" id="searchLoading">
-        <svg class="loading-spinner" viewBox="25 25 50 50">
-          <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100"/>
-        </svg>
+        <span class="material-symbols-outlined loading-spinner" aria-hidden="true">progress_activity</span>
         <span>搜索中...</span>
       </div>
       <div class="results-list" id="resultsList"></div>
@@ -78,7 +77,8 @@
   <!-- Lottie图标工具库 -->
   <script src="../js/lottie-icon-utils.js?v=20260822b"></script>
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/search.js?v=20260821h"></script>
-<footer class="site-footer">© 2026 执信论坛 · 星夜工作室</footer>
+  <script type="module" src="../js/theme-init.js?v=20261005a"></script>
+  <script type="module" src="../js/search.js?v=20260928o"></script>
+<footer class="site-footer">© 2026 执信论坛 · +1科创工作室</footer>
 </body>
 </html>

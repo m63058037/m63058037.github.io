@@ -1,16 +1,11 @@
-import { authService } from '../services/auth.js';
+import { authService, UserRoles } from '../services/auth.js';
 import { adminService } from '../services/admin.js';
 import { announcementService } from '../services/announcement.js';
 import { messageService } from '../services/message.js';
 import { sensitiveWordService } from '../services/sensitive-word.js';
 import { showContentWarnDialog } from '../components/content-warn-dialog.js';
-
-const UserRoles = {
-  GUEST: 'guest',
-  MEMBER: 'member',
-  ADMIN: 'admin',
-  DEV_ADMIN: 'dev_admin'
-};
+import { themeService, isValidHexColor } from '../services/theme.js';
+import { THEME_CATEGORY_LABELS, THEME_FIELD_LABELS } from '../config/theme-defaults.js';
 
 // 与服务端 services/report.js 中 ReportTypes 枚举值保持一致的中文标签
 // 键为短信/提交端真实存储的 report_type 值，而非旧版错误键名（spam/harassment/inappropriate/other）
@@ -30,6 +25,11 @@ class AdminPage {
     this.currentSection = 'dashboard';
     this.passwordResetTab = 'pending';
     this.reportsTab = 'pending';
+    // 公告编辑内容缓存：避免把长文塞进 data-* 属性
+    this.announcementEditCache = new Map();
+    this.themeDraft = null;
+    this.themeSaved = null;
+    this.themeName = '';
 
     // DOM 元素
     this.sidebar = document.querySelector('.admin-sidebar');
@@ -123,16 +123,16 @@ class AdminPage {
     // 对普通管理员隐藏「公告管理」整个分组（含 header + nav-item），
     // 避免仅隐藏 header 导致 nav-item 悬浮显示。不用 :has()（兼容性不稳）。
     this.navItems.forEach(item => {
-      if (item.dataset.section === 'announcements' && !isDevAdmin) {
+      if ((item.dataset.section === 'announcements' || item.dataset.section === 'theme-ui') && !isDevAdmin) {
         item.style.display = 'none';
       }
     });
     if (!isDevAdmin) {
       this.accordionHeaders.forEach(header => {
-        if (header.dataset.accordion === 'announcement-group') {
+        const key = header.dataset.accordion;
+        if (key === 'announcement-group' || key === 'theme-group') {
           header.style.display = 'none';
-          // 隐藏分组后折叠其 body，避免空白分组占位
-          const body = this.sidebar.querySelector('.accordion-body[data-accordion-body="announcement-group"]');
+          const body = this.sidebar.querySelector(`.accordion-body[data-accordion-body="${key}"]`);
           if (body) body.style.display = 'none';
         }
       });
@@ -354,7 +354,7 @@ class AdminPage {
         const section = item.dataset.section;
         if (!section) return;
         // 普通管理员不能访问公告管理
-        if (section === 'announcements' && this.userRole !== UserRoles.DEV_ADMIN) {
+        if ((section === 'announcements' || section === 'theme-ui') && this.userRole !== UserRoles.DEV_ADMIN) {
           this.showSnackbar('您没有权限访问此功能');
           return;
         }
@@ -454,7 +454,7 @@ class AdminPage {
   handleHashChange() {
     const hash = window.location.hash.replace('#', '') || 'dashboard';
     // 权限检查
-    if (hash === 'announcements' && this.userRole !== UserRoles.DEV_ADMIN) {
+    if ((hash === 'announcements' || hash === 'theme-ui') && this.userRole !== UserRoles.DEV_ADMIN) {
       this.switchSection('dashboard');
       return;
     }
@@ -463,6 +463,10 @@ class AdminPage {
 
   switchSection(section, updateHash = true) {
     if (section === this.currentSection && this.adminContent.children.length > 0) return;
+
+    if (this.currentSection === 'theme-ui' && section !== 'theme-ui' && this.themeSaved) {
+      themeService.revertPreviewToSaved(this.themeSaved);
+    }
 
     this.currentSection = section;
 
@@ -493,7 +497,8 @@ class AdminPage {
       'dashboard': '总览',
       'password-reset': '忘记密码审核',
       'reports': '举报审核',
-      'announcements': '公告管理'
+      'announcements': '公告管理',
+      'theme-ui': 'UI 颜色系统'
     };
     if (this.topbarTitle) {
       this.topbarTitle.textContent = titles[section] || '管理后台';
@@ -521,6 +526,9 @@ class AdminPage {
         break;
       case 'announcements':
         this.renderAnnouncements();
+        break;
+      case 'theme-ui':
+        this.renderThemeUi();
         break;
       default:
         this.renderDashboard();
@@ -1288,6 +1296,175 @@ class AdminPage {
     });
   }
 
+  // ==================== UI 颜色系统（仅 dev_admin） ====================
+
+  denyThemeUiIfNeeded() {
+    if (this.userRole !== UserRoles.DEV_ADMIN) {
+      this.adminContent.innerHTML = this.renderErrorState('您没有权限访问此功能', () => this.switchSection('dashboard'));
+      return true;
+    }
+    return false;
+  }
+
+  async renderThemeUi() {
+    if (this.denyThemeUiIfNeeded()) return;
+
+    this.adminContent.innerHTML = this.renderLoading('正在加载主题配置...');
+
+    const response = await themeService.fetchThemeForAdmin();
+    if (!response.success) {
+      this.adminContent.innerHTML = this.renderErrorState(response.error || '加载失败', () => this.renderThemeUi());
+      return;
+    }
+
+    this.themeName = response.data.themeName || '正式版 1.0';
+    this.themeSaved = JSON.parse(JSON.stringify(response.data.config));
+    this.themeDraft = JSON.parse(JSON.stringify(response.data.config));
+    this.paintThemeUi();
+  }
+
+  paintThemeUi() {
+    const draft = this.themeDraft;
+    const warnings = themeService.getThemeContrastWarnings(draft);
+    const categories = ['button', 'background', 'card', 'text'];
+
+    let panels = '';
+    for (const cat of categories) {
+      const fields = THEME_FIELD_LABELS[cat] || {};
+      let rows = '';
+      for (const [key, label] of Object.entries(fields)) {
+        const val = (draft[cat] && draft[cat][key]) || '#000000';
+        const hex = val.toUpperCase();
+        rows += `
+          <div class="theme-ui-row">
+            <label for="theme-${cat}-${key}">${this.escapeHtml(label)}</label>
+            <input type="color" id="theme-color-${cat}-${key}" data-cat="${cat}" data-key="${key}" value="${hex.toLowerCase()}" aria-label="${this.escapeHtml(label)} 取色">
+            <input type="text" id="theme-${cat}-${key}" data-cat="${cat}" data-key="${key}" value="${hex}" maxlength="7" spellcheck="false" aria-label="${this.escapeHtml(label)} HEX">
+          </div>`;
+      }
+      panels += `
+        <section class="theme-ui-panel">
+          <h4>${this.escapeHtml(THEME_CATEGORY_LABELS[cat] || cat)}</h4>
+          ${rows}
+        </section>`;
+    }
+
+    this.adminContent.innerHTML = `
+      <div class="theme-ui-page">
+        <div class="theme-ui-toolbar">
+          <div>
+            <h3 style="margin:0 0 0.25rem;font-size:1.25rem;font-weight:500;">UI 颜色系统</h3>
+            <p class="theme-ui-hint">当前主题：${this.escapeHtml(this.themeName)}。修改后仅实时预览，需点击「保存主题」才会写入数据库。</p>
+          </div>
+          <div class="theme-ui-actions">
+            <button type="button" class="btn-secondary" id="themeResetBtn">恢复默认颜色</button>
+            <button type="button" class="btn-primary" id="themeSaveBtn">保存主题</button>
+          </div>
+        </div>
+        ${warnings.length ? `<div class="theme-ui-warnings" id="themeWarnings">${warnings.map(w => this.escapeHtml(w)).join('<br>')}</div>` : '<div id="themeWarnings"></div>'}
+        <div class="theme-ui-preview">
+          <button type="button" class="btn-primary">主按钮</button>
+          <button type="button" class="btn-secondary">次按钮</button>
+          <button type="button" class="btn-primary" disabled>禁用按钮</button>
+          <div class="theme-ui-preview-card">
+            <strong>卡片预览</strong>
+            <p style="margin:0.25rem 0 0;font-size:0.8125rem;color:var(--md-sys-color-on-surface-variant);">次文字 / <a href="#" class="link-primary" onclick="return false;">链接文字</a></p>
+          </div>
+        </div>
+        <div class="theme-ui-grid">${panels}</div>
+      </div>
+    `;
+
+    this.bindThemeUiEvents();
+  }
+
+  bindThemeUiEvents() {
+    this.adminContent.querySelectorAll('.theme-ui-row input[type="color"]').forEach(input => {
+      input.addEventListener('input', () => {
+        this.updateThemeDraftField(input.dataset.cat, input.dataset.key, input.value);
+        const hexInput = this.adminContent.querySelector(`#theme-${input.dataset.cat}-${input.dataset.key}`);
+        if (hexInput) hexInput.value = input.value.toUpperCase();
+      });
+    });
+    this.adminContent.querySelectorAll('.theme-ui-row input[type="text"]').forEach(input => {
+      input.addEventListener('change', () => {
+        const raw = (input.value || '').trim();
+        const hex = raw.startsWith('#') ? raw : `#${raw}`;
+        if (!isValidHexColor(hex)) {
+          this.showSnackbar('请输入有效的 #RRGGBB 颜色');
+          input.value = this.themeDraft[input.dataset.cat][input.dataset.key];
+          return;
+        }
+        const normalized = hex.toUpperCase();
+        input.value = normalized;
+        const colorInput = this.adminContent.querySelector(`#theme-color-${input.dataset.cat}-${input.dataset.key}`);
+        if (colorInput) colorInput.value = normalized;
+        this.updateThemeDraftField(input.dataset.cat, input.dataset.key, normalized);
+      });
+    });
+
+    const saveBtn = document.getElementById('themeSaveBtn');
+    if (saveBtn) saveBtn.addEventListener('click', () => this.saveThemeUi());
+    const resetBtn = document.getElementById('themeResetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', () => this.confirmResetThemeUi());
+  }
+
+  updateThemeDraftField(cat, key, hex) {
+    if (!this.themeDraft[cat]) this.themeDraft[cat] = {};
+    this.themeDraft[cat][key] = hex.toUpperCase();
+    themeService.previewTheme(this.themeDraft);
+    this.refreshThemeWarnings();
+  }
+
+  refreshThemeWarnings() {
+    const box = document.getElementById('themeWarnings');
+    if (!box) return;
+    const warnings = themeService.getThemeContrastWarnings(this.themeDraft);
+    if (!warnings.length) {
+      box.className = '';
+      box.innerHTML = '';
+      return;
+    }
+    box.className = 'theme-ui-warnings';
+    box.innerHTML = warnings.map(w => this.escapeHtml(w)).join('<br>');
+  }
+
+  async saveThemeUi() {
+    if (this.denyThemeUiIfNeeded()) return;
+    const check = themeService.validateThemeConfigForSave(this.themeDraft);
+    if (!check.valid) {
+      this.showSnackbar(check.message);
+      return;
+    }
+    const response = await themeService.saveTheme(check.config, this.themeName);
+    if (!response.success) {
+      this.showSnackbar(response.error || '保存失败');
+      return;
+    }
+    this.themeSaved = JSON.parse(JSON.stringify(check.config));
+    this.themeDraft = JSON.parse(JSON.stringify(check.config));
+    this.showSnackbar('主题已保存，全站将使用新颜色');
+  }
+
+  confirmResetThemeUi() {
+    this.showDialog({
+      title: '恢复默认颜色',
+      content: '<p style="margin:0;color:var(--md-sys-color-on-surface-variant);">将恢复正式版 1.0 默认颜色并立即保存。确定继续？</p>',
+      confirmText: '恢复默认',
+      confirmType: 'danger',
+      onConfirm: async () => {
+        const response = await themeService.resetThemeToDefault();
+        if (!response.success) {
+          this.showSnackbar(response.error || '恢复失败');
+          return false;
+        }
+        this.showSnackbar('已恢复正式版 1.0 默认颜色');
+        await this.renderThemeUi();
+        return true;
+      }
+    });
+  }
+
   // ==================== 公告管理 ====================
 
   async renderAnnouncements() {
@@ -1358,7 +1535,12 @@ class AdminPage {
       }
 
       let html = '<div class="admin-list" style="display: flex; flex-direction: column; gap: 0.75rem;">';
+      this.announcementEditCache.clear();
       items.forEach(item => {
+        this.announcementEditCache.set(String(item.id), {
+          title: item.title || '',
+          content: item.content || ''
+        });
         html += this.renderAnnouncementItem(item);
       });
       html += '</div>';
@@ -1367,14 +1549,17 @@ class AdminPage {
       listContainer.querySelectorAll('.edit-announcement-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.dataset.id;
-          const title = btn.dataset.title;
-          const content = btn.dataset.content;
-          this.showEditAnnouncementDialog(id, title, content);
+          const cached = this.announcementEditCache.get(String(id)) || {};
+          this.showEditAnnouncementDialog(id, cached.title || '', cached.content || '');
         });
       });
 
       listContainer.querySelectorAll('.publish-announcement-btn').forEach(btn => {
-        btn.addEventListener('click', () => this.showPublishAnnouncementDialog(btn.dataset.id, btn.dataset.title));
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const cached = this.announcementEditCache.get(String(id)) || {};
+          this.showPublishAnnouncementDialog(id, cached.title || '');
+        });
       });
 
     } catch (error) {
@@ -1412,7 +1597,7 @@ class AdminPage {
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             ${isDraft ? `
-              <button class="publish-announcement-btn" data-id="${item.id}" data-title="${this.escapeHtml(item.title || '')}" style="
+              <button class="publish-announcement-btn" data-id="${item.id}" style="
                 padding: 0.375rem 0.875rem;
                 font-size: 0.8125rem;
                 font-weight: 500;
@@ -1426,7 +1611,7 @@ class AdminPage {
               " onmouseover="this.style.backgroundColor='var(--md-sys-color-primary-dark)';"
                 onmouseout="this.style.backgroundColor='var(--md-sys-color-primary)';">发布</button>
             ` : ''}
-            <button class="edit-announcement-btn" data-id="${item.id}" data-title="${this.escapeHtml(item.title || '')}" data-content="${this.escapeHtml(item.content || '')}" style="
+            <button class="edit-announcement-btn" data-id="${item.id}" style="
               padding: 0.375rem 0.875rem;
               font-size: 0.8125rem;
               font-weight: 500;
@@ -1635,21 +1820,9 @@ class AdminPage {
         padding: 3rem 1rem;
         gap: 1rem;
       ">
-        <div class="loading-spinner" style="
-          width: 40px;
-          height: 40px;
-          border: 3px solid var(--md-sys-color-surface-variant);
-          border-top-color: var(--md-sys-color-primary);
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        "></div>
+        <span class="material-symbols-outlined loading-spinner" aria-hidden="true">progress_activity</span>
         <span style="font-size: 0.875rem; color: var(--md-sys-color-on-surface-variant);">${this.escapeHtml(text)}</span>
       </div>
-      <style>
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      </style>
     `;
   }
 
