@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=20260929d">
-  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20260929d">
+  <link rel="stylesheet" href="../css/styles.css?v=20261005a">
+  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20261005a">
   <style>
     /* 首页搜索栏：只保留外层 .search-bar 边框，去掉内部 input 的第二层框 */
     .home-header .search-bar .search-input,
@@ -19,6 +19,20 @@
       box-shadow: none;
       border-radius: 0;
       outline: none;
+    }
+
+    /* 首屏 loading：不用图标字体，避免 progress_activity 字面量闪现 */
+    .home-page .loading-spinner.css-ring {
+      font-size: 0 !important;
+      width: 40px;
+      height: 40px;
+      border: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 25%, transparent) !important;
+      border-top-color: var(--md-sys-color-primary) !important;
+      border-radius: 50% !important;
+      background: none !important;
+      color: transparent !important;
+      animation: md3-progress-rotate 1s linear infinite !important;
+      box-sizing: border-box;
     }
   </style>
 </head>
@@ -154,7 +168,7 @@
           </a>
         </div>
         <div class="posts-loading" id="postsLoading">
-          <span class="material-symbols-outlined loading-spinner" aria-hidden="true">progress_activity</span>
+          <span class="loading-spinner css-ring" aria-hidden="true"></span>
           <span>加载中...</span>
         </div>
         <div class="hot-posts-section" id="hotPostsSection" style="display: none;">
@@ -163,7 +177,7 @@
         </div>
         <div class="posts-list" id="postsList"></div>
         <div class="loading-more" id="loadingMore" style="display: none;">
-          <span class="material-symbols-outlined loading-spinner" aria-hidden="true">progress_activity</span>
+          <span class="loading-spinner css-ring" aria-hidden="true"></span>
           <span>加载更多...</span>
         </div>
         <div class="no-more-posts" id="noMorePosts" style="display: none;">
@@ -246,6 +260,7 @@
   <!-- Lottie图标工具库 -->
   <script src="../js/lottie-icon-utils.js?v=20260822b"></script>
   <script src="../assets/js/supabase.js"></script>
+  <script type="module" src="../js/theme-init.js?v=20261005a"></script>
   <script type="module" src="../js/home.js?v=20260928o"></script>
 <footer class="site-footer">© 2026 执信论坛 · +1科创工作室</footer>
 </body>
