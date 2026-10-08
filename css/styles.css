@@ -124,6 +124,17 @@
   --md-sys-type-weight-medium: 500;
   --md-sys-type-weight-bold: 700;
 
+  /* 全站主题桥接（默认=正式版 1.0；由 themeService 覆盖 --md-sys-color-* 与下列变量） */
+  --site-theme-button-secondary-bg: transparent;
+  --site-theme-button-secondary-text: var(--md-sys-color-primary);
+  --site-theme-button-disabled-bg: #D5DBD0;
+  --site-theme-button-disabled-text: #9AA096;
+  --site-theme-card-bg: var(--md-sys-color-surface-container-low);
+  --site-theme-card-border: var(--md-sys-color-outline-variant);
+  --site-theme-card-inner: var(--md-sys-color-surface-container);
+  --site-theme-text-link: var(--md-sys-color-primary);
+  --site-theme-text-emphasis: var(--md-sys-color-on-primary-container);
+
   /* State layers (MD3) */
   --md-sys-state-hover-opacity: 0.08;
   --md-sys-state-focus-opacity: 0.12;
@@ -192,11 +203,11 @@ body {
 
 .login-card {
   /* MD3 elevated/filled tonal surface — 非纯白 */
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--site-theme-card-bg, var(--md-sys-color-surface-container));
   border-radius: var(--md-sys-shape-corner-extra-large);
   padding: 2.5rem;
   box-shadow: var(--md-sys-color-elevation-level-2);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  border: 1px solid var(--site-theme-card-border, var(--md-sys-color-outline-variant));
   position: relative;
   transition: background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
               box-shadow var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
@@ -509,7 +520,7 @@ body {
 }
 
 .link-primary {
-  color: var(--md-sys-color-primary);
+  color: var(--site-theme-text-link, var(--md-sys-color-primary));
   text-decoration: none;
   font-weight: var(--md-sys-type-weight-medium);
   transition: color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
@@ -1166,8 +1177,8 @@ body {
   font-weight: var(--md-sys-type-weight-medium);
   font-family: inherit;
   letter-spacing: 0.01em;
-  background-color: transparent;
-  color: var(--md-sys-color-primary);
+  background-color: var(--site-theme-button-secondary-bg, transparent);
+  color: var(--site-theme-button-secondary-text, var(--md-sys-color-primary));
   border: 1px solid var(--md-sys-color-outline);
   border-radius: var(--md-sys-shape-corner-full);
   cursor: pointer;
@@ -1230,8 +1241,8 @@ body {
 }
 
 .btn-primary:disabled {
-  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
-  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  background-color: var(--site-theme-button-disabled-bg, color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent));
+  color: var(--site-theme-button-disabled-text, color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent));
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -1286,7 +1297,7 @@ body {
   border-radius: 12px;
   font-size: var(--md-sys-type-size-label-small);
   font-weight: var(--md-sys-type-weight-medium);
-  color: var(--md-sys-color-on-primary-container);
+  color: var(--site-theme-text-emphasis, var(--md-sys-color-on-primary-container));
   background-color: var(--md-sys-color-primary-container);
 }
 
@@ -1777,17 +1788,17 @@ body {
 }
 
 .posts-container {
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--site-theme-card-inner, var(--md-sys-color-surface-container));
   border-radius: 1rem;
   padding: 1rem;
 }
 
 .create-post-card {
-  background-color: var(--md-sys-color-surface);
+  background-color: var(--site-theme-card-bg, var(--md-sys-color-surface));
   border-radius: 0.75rem;
   padding: 1rem;
   margin-bottom: 1rem;
-  border: 1px dashed var(--md-sys-color-outline);
+  border: 1px dashed var(--site-theme-card-border, var(--md-sys-color-outline));
 }
 
 .create-post-button {
@@ -1868,10 +1879,10 @@ body {
 }
 
 .post-card {
-  background-color: var(--md-sys-color-surface-container-low);
+  background-color: var(--site-theme-card-bg, var(--md-sys-color-surface-container-low));
   border-radius: var(--md-sys-shape-corner-large);
   padding: 1rem;
-  border: 1px solid var(--md-sys-color-outline-variant);
+  border: 1px solid var(--site-theme-card-border, var(--md-sys-color-outline-variant));
   box-shadow: var(--md-sys-color-elevation-level-0);
   cursor: pointer;
   transition: box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
@@ -1881,7 +1892,7 @@ body {
 }
 
 .post-card:hover {
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--site-theme-card-inner, var(--md-sys-color-surface-container));
   box-shadow: var(--md-sys-color-elevation-level-1);
   border-color: transparent;
 }
@@ -5842,7 +5853,7 @@ body.sheet-open {
 }
 
 .message-card {
-  background-color: var(--md-sys-color-surface-container-low);
+  background-color: var(--site-theme-card-bg, var(--md-sys-color-surface-container-low));
   border-radius: 16px;
   padding: 16px;
   cursor: pointer;
@@ -5851,7 +5862,7 @@ body.sheet-open {
 }
 
 .message-card:hover {
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--site-theme-card-inner, var(--md-sys-color-surface-container));
 }
 
 .message-card.unread {
@@ -7677,7 +7688,7 @@ body.sheet-open {
 .admin-list-item,
 .profile-card,
 .detail-card {
-  background-color: var(--md-sys-color-surface-container-low);
+  background-color: var(--site-theme-card-bg, var(--md-sys-color-surface-container-low));
   border: none;
   box-shadow: var(--md-sys-color-elevation-level-1);
   transition: box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
@@ -7689,8 +7700,8 @@ body.sheet-open {
 .login-card,
 .register-card,
 .forgot-password-card {
-  background-color: var(--md-sys-color-surface-container) !important;
-  border: 1px solid var(--md-sys-color-outline-variant) !important;
+  background-color: var(--site-theme-card-bg, var(--md-sys-color-surface-container)) !important;
+  border: 1px solid var(--site-theme-card-border, var(--md-sys-color-outline-variant)) !important;
   box-shadow: var(--md-sys-color-elevation-level-2) !important;
   transform: none !important;
 }
@@ -7707,7 +7718,7 @@ body.sheet-open {
 .search-result-card:hover,
 .message-card:hover,
 .admin-list-item:hover {
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--site-theme-card-inner, var(--md-sys-color-surface-container));
   box-shadow: var(--md-sys-color-elevation-level-2);
   transform: translateY(-1px);
 }
@@ -7950,7 +7961,7 @@ body.sheet-open {
 .search-result-card:hover,
 .message-card:hover,
 .admin-list-item:hover {
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--site-theme-card-inner, var(--md-sys-color-surface-container));
   box-shadow: var(--md-sys-color-elevation-level-2);
   transform: translateY(-2px);
 }
@@ -8295,7 +8306,7 @@ select.form-input:focus {
 .link-primary,
 .forgot-password,
 .author-name {
-  color: var(--md-sys-color-primary);
+  color: var(--site-theme-text-link, var(--md-sys-color-primary));
 }
 
 .link-primary:hover,
@@ -8336,19 +8347,150 @@ select.form-input:focus {
   }
 }
 
-/* Login: desktop width only. Phone keeps 420px card. */
+/* ---- Admin: UI 颜色系统 ---- */
+.theme-ui-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.theme-ui-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-ui-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.theme-ui-hint,
+.theme-ui-warnings {
+  font-size: var(--md-sys-type-size-body-small);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.theme-ui-warnings {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--md-sys-color-warning-container);
+  color: var(--md-sys-color-on-warning-container);
+}
+
+.theme-ui-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.theme-ui-panel {
+  background: var(--site-theme-card-bg, var(--md-sys-color-surface-container-low));
+  border: 1px solid var(--site-theme-card-border, var(--md-sys-color-outline-variant));
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.theme-ui-panel h4 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.theme-ui-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.625rem;
+}
+
+.theme-ui-row label {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.theme-ui-row input[type="color"] {
+  width: 40px;
+  height: 32px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 0.375rem;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.theme-ui-row input[type="text"] {
+  width: 7.5rem;
+  padding: 0.375rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 0.375rem;
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+.theme-ui-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--md-sys-color-background);
+  border: 1px dashed var(--md-sys-color-outline-variant);
+}
+
+.theme-ui-preview-card {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--site-theme-card-bg);
+  border: 1px solid var(--site-theme-card-border);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* ---- Auth + profile: desktop responsive (phone keeps base single-column) ---- */
 @media (min-width: 768px) {
+  .login-page,
+  .register-page {
+    padding: 2.5rem 1.5rem;
+  }
+
   .login-page .login-container {
     max-width: 520px;
   }
 
-  .login-page .login-card {
+  .register-page .register-container {
+    max-width: 600px;
+  }
+
+  .login-page .login-card,
+  .register-page .register-card {
     padding: 2.75rem 3rem;
+  }
+
+  .profile-page {
+    padding: 2rem 1.5rem;
+  }
+
+  .profile-page .profile-container {
+    max-width: 720px;
+  }
+
+  .profile-page .profile-card {
+    padding: 2.5rem 2.75rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .login-page {
+  .login-page,
+  .register-page,
+  .profile-page {
     padding: 2.5rem 2rem;
   }
 
@@ -8358,5 +8500,94 @@ select.form-input:focus {
 
   .login-page .login-card {
     padding: 3rem 3.25rem;
+  }
+
+  /* Register: wider card + safe two-column fields (DOM order preserved) */
+  .register-page .register-container {
+    max-width: 760px;
+  }
+
+  .register-page .register-card {
+    padding: 3rem 3.25rem;
+  }
+
+  .register-page .register-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 1.25rem;
+    row-gap: 1.25rem;
+    align-items: start;
+  }
+
+  .register-page .register-form > .form-field:has(#studentTypeGroup),
+  .register-page .register-form > .form-field:has(#nickname),
+  .register-page .register-form > .checkbox-wrapper,
+  .register-page .register-form > .form-error,
+  .register-page .register-form > .register-button {
+    grid-column: 1 / -1;
+  }
+
+  .register-page .register-form > .form-field:has(#password),
+  .register-page .register-form > .form-field:has(#confirmPassword) {
+    grid-column: span 1;
+  }
+
+  /* Profile: left identity panel + right editable form */
+  .profile-page .profile-container {
+    max-width: 960px;
+  }
+
+  .profile-page .profile-card {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    column-gap: 2.5rem;
+    row-gap: 1.25rem;
+    align-items: start;
+    padding: 2.5rem 3rem;
+  }
+
+  .profile-page .profile-card-header {
+    grid-column: 1 / -1;
+    margin-bottom: 0.5rem;
+  }
+
+  .profile-page .profile-header {
+    grid-column: 1;
+    grid-row: 2;
+    text-align: left;
+    margin-bottom: 0;
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  .profile-page .profile-avatar-section {
+    margin-bottom: 1rem;
+  }
+
+  .profile-page .avatar-wrapper {
+    margin: 0;
+  }
+
+  .profile-page .profile-form {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .profile-page .profile-footer {
+    grid-column: 1 / -1;
+  }
+
+  .profile-page .snackbar-container {
+    grid-column: 1 / -1;
+  }
+
+  .profile-page .form-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .profile-page .form-actions {
+    max-width: 360px;
+    margin-left: auto;
   }
 }
