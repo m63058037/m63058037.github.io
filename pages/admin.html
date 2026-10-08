@@ -7,8 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=20260822a">
-  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20260822b">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=20261005a">
+  <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20261005a">
 </head>
 <body class="admin-page">
   <aside class="admin-sidebar" id="adminSidebar">
@@ -68,6 +69,58 @@
         </div>
       </div>
       <div class="accordion-group">
+        <div class="accordion-header" role="button" tabindex="0" data-accordion="penalty-group">
+          <span class="accordion-title">账户处罚</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+          </svg>
+        </div>
+        <div class="accordion-body" data-accordion-body="penalty-group">
+          <ul class="nav-list">
+            <li class="nav-item" data-section="account-penalty">
+              <a href="#account-penalty">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/>
+                </svg>
+                <span>处罚与解封</span>
+              </a>
+            </li>
+            <li class="nav-item" data-section="penalty-history">
+              <a href="#penalty-history">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12z"/>
+                </svg>
+                <span>处罚历史</span>
+              </a>
+            </li>
+            <li class="nav-item" data-section="audit-logs">
+              <a href="#audit-logs">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                <span>审计日志</span>
+              </a>
+            </li>
+            <li class="nav-item" data-section="admin-roles">
+              <a href="#admin-roles">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span>管理员管理</span>
+              </a>
+            </li>
+            <li class="nav-item" data-section="sensitive-l4">
+              <a href="#sensitive-l4">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </svg>
+                <span>敏感词 L4</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="accordion-group">
         <div class="accordion-header" role="button" tabindex="0" data-accordion="announcement-group">
           <span class="accordion-title">公告管理</span>
           <svg class="accordion-caret" viewBox="0 0 24 24" fill="currentColor">
@@ -82,6 +135,26 @@
                   <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
                 </svg>
                 <span>公告管理</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="accordion-group">
+        <div class="accordion-header" role="button" tabindex="0" data-accordion="theme-group">
+          <span class="accordion-title">界面外观</span>
+          <svg class="accordion-caret" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+          </svg>
+        </div>
+        <div class="accordion-body" data-accordion-body="theme-group">
+          <ul class="nav-list">
+            <li class="nav-item" data-section="theme-ui">
+              <a href="#theme-ui">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+                <span>UI 颜色系统</span>
               </a>
             </li>
           </ul>
@@ -135,7 +208,8 @@
   <!-- Lottie图标工具库 -->
   <script src="../js/lottie-icon-utils.js?v=20260822b"></script>
   <script src="../assets/js/supabase.js"></script>
-  <script type="module" src="../js/admin.js?v=20260822a"></script>
-<footer class="site-footer">© 2026 执信论坛 · 星夜工作室</footer>
+  <script type="module" src="../js/theme-init.js?v=20261005a"></script>
+  <script type="module" src="../js/admin.js?v=20261005p3"></script>
+<footer class="site-footer">© 2026 执信论坛 · +1科创工作室</footer>
 </body>
 </html>
