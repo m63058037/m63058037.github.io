@@ -2,7 +2,7 @@ import { authService } from '../services/auth.js';
 import { announcementService } from '../services/announcement.js';
 import { HeaderComponent } from '../components/header.js';
 import { FeedComponent } from '../components/feed.js';
-import { SidebarComponent } from '../components/sidebar.js';
+import { SidebarComponent } from '../components/sidebar.js?v=20261010a';
 import { RightSidebarComponent } from '../components/right-sidebar.js';
 import { getBranchOptionsWithAll, ALL_BRANCH, getBranchByName } from '../config/branches.js';
 
@@ -65,9 +65,11 @@ class HomePage {
 
     options.forEach(opt => {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'category-item' + (opt.value === this.currentBranch ? ' active' : '');
       btn.dataset.branch = opt.value;
       btn.textContent = opt.label;
+      btn.setAttribute('aria-pressed', opt.value === this.currentBranch ? 'true' : 'false');
       btn.addEventListener('click', () => this.handleBranchChange(opt.value));
       this.branchScroll.appendChild(btn);
     });
@@ -78,7 +80,9 @@ class HomePage {
     this.currentBranch = branch;
 
     this.branchScroll.querySelectorAll('.category-item').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.branch === branch);
+      const isActive = btn.dataset.branch === branch;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
     const url = new URL(window.location);
@@ -147,7 +151,20 @@ class HomePage {
     if (this.snackbarAction) {
       this.snackbarAction.addEventListener('click', () => this.hideSnackbar());
     }
+    this.bindQuickNavKeyboard();
     this.initHeaderScroll();
+  }
+
+  /** 侧栏「快速导航」：Space 触发链接跳转（Enter 原生已支持） */
+  bindQuickNavKeyboard() {
+    document.querySelectorAll('.sidebar .sidebar-section .nav-list .nav-item a').forEach(link => {
+      link.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          link.click();
+        }
+      });
+    });
   }
 
   initHeaderScroll() {

@@ -8,8 +8,78 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=20261005a">
+  <link rel="stylesheet" href="../css/styles.css?v=20261010a">
   <link rel="stylesheet" href="../css/lottie-icon-styles.css?v=20261005a">
+  <style>
+    /* 首页搜索栏：只保留外层 .search-bar 边框，去掉内部 input 的第二层框 */
+    .home-header .search-bar .search-input,
+    .home-header .search-bar .search-input:focus {
+      border: none;
+      background: none;
+      box-shadow: none;
+      border-radius: 0;
+      outline: none;
+    }
+
+    /* 首屏 loading：不用图标字体，避免 progress_activity 字面量闪现 */
+    .home-page .loading-spinner.css-ring {
+      font-size: 0 !important;
+      width: 40px;
+      height: 40px;
+      border: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 25%, transparent) !important;
+      border-top-color: var(--md-sys-color-primary) !important;
+      border-radius: 50% !important;
+      background: none !important;
+      color: transparent !important;
+      animation: md3-progress-rotate 1s linear infinite !important;
+      box-sizing: border-box;
+    }
+
+    /*
+     * 顶部校区筛选交互（侧栏「快速导航」样式已迁入 styles.css）
+     */
+    .home-page .category-nav .category-item {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .home-page .sidebar .nav-item a {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .home-page .category-nav .category-item:focus-visible {
+      outline: 2px solid var(--md-sys-color-primary);
+      outline-offset: 2px;
+      z-index: 1;
+    }
+
+    .home-page .category-nav .category-item:active {
+      transform: scale(0.98);
+    }
+
+    .home-page .category-nav .category-item:active:not(.active) {
+      background-color: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .home-page .category-nav .category-item.active:active {
+      filter: brightness(0.94);
+    }
+
+    @media (hover: none) {
+      .home-page .category-nav .category-item:hover:not(.active) {
+        background: none;
+        color: var(--md-sys-color-on-surface-variant);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .home-page .category-nav .category-item:active {
+        transform: none;
+      }
+    }
+  </style>
 </head>
 <body class="home-page">
   <header class="home-header">
@@ -117,7 +187,19 @@
         </div>
 
         <div class="sidebar-footer">
-          <button class="logout-btn" id="sidebarLogoutBtn">
+          <a
+            class="koolesson-entry koolesson-entry--sidebar"
+            href="https://koolesson.com/#forum"
+            aria-label="前往科创论坛"
+          >
+            <span class="koolesson-entry__inner">
+              <svg class="koolesson-entry__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2.4L3.6 7v10L12 21.6 20.4 17V7L12 2.4zm0 2.05l6.55 3.58L12 11.6 5.45 8.03 12 4.45zM4.9 9.2l6.2 3.48v6.85L4.9 16.08V9.2zm7.3 10.33v-6.85l6.2-3.48v6.88l-6.2 3.45z"/>
+              </svg>
+              <span class="koolesson-entry__label">科创论坛</span>
+            </span>
+          </a>
+          <button class="logout-btn" id="sidebarLogoutBtn" type="button">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
@@ -143,7 +225,7 @@
           </a>
         </div>
         <div class="posts-loading" id="postsLoading">
-          <span class="material-symbols-outlined loading-spinner" aria-hidden="true">progress_activity</span>
+          <span class="loading-spinner css-ring" aria-hidden="true"></span>
           <span>加载中...</span>
         </div>
         <div class="hot-posts-section" id="hotPostsSection" style="display: none;">
@@ -152,7 +234,7 @@
         </div>
         <div class="posts-list" id="postsList"></div>
         <div class="loading-more" id="loadingMore" style="display: none;">
-          <span class="material-symbols-outlined loading-spinner" aria-hidden="true">progress_activity</span>
+          <span class="loading-spinner css-ring" aria-hidden="true"></span>
           <span>加载更多...</span>
         </div>
         <div class="no-more-posts" id="noMorePosts" style="display: none;">
@@ -236,7 +318,7 @@
   <script src="../js/lottie-icon-utils.js?v=20260822b"></script>
   <script src="../assets/js/supabase.js"></script>
   <script type="module" src="../js/theme-init.js?v=20261005a"></script>
-  <script type="module" src="../js/home.js?v=20260928o"></script>
+  <script type="module" src="../js/home.js?v=20261010a"></script>
 <footer class="site-footer">© 2026 执信论坛 · +1科创工作室</footer>
 </body>
 </html>
