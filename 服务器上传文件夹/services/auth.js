@@ -25,10 +25,47 @@ export const authService = {
     return `${uid}@campus-forum.local`;
   },
 
+  _checkClientRateLimit(bucketKey, limit, windowMs) {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return { allowed: true };
+      }
+      const storageKey = `rate:${bucketKey}`;
+      const now = Date.now();
+      let entries = [];
+      try {
+        entries = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+      } catch (e) {
+        entries = [];
+      }
+      if (!Array.isArray(entries)) entries = [];
+      entries = entries.filter((ts) => typeof ts === 'number' && now - ts < windowMs);
+      if (entries.length >= limit) {
+        const waitSec = Math.max(1, Math.ceil((windowMs - (now - entries[0])) / 1000));
+        return { allowed: false, waitSec };
+      }
+      entries.push(now);
+      sessionStorage.setItem(storageKey, JSON.stringify(entries));
+      return { allowed: true };
+    } catch (e) {
+      // 限流存储异常时不阻断正常登录/查询
+      return { allowed: true };
+    }
+  },
+
   async login(uid, password) {
     try {
       if (!uid || typeof uid !== 'string' || !/^\d{8}$/.test(uid)) {
         return createResponse(false, null, '请输入有效的8位UID', 400);
+      }
+
+      const rate = this._checkClientRateLimit(
+        `login:${uid}`,
+        config.loginRateLimit || 5,
+        config.loginRateLimitWindowMs || 60000
+      );
+      if (!rate.allowed) {
+        return createResponse(false, null, `尝试过于频繁，请 ${rate.waitSec} 秒后再试`, 429);
       }
 
       const email = this._generateVirtualEmail(uid);
@@ -63,6 +100,15 @@ export const authService = {
 
   async findAccountsByIdentity(identityData) {
     try {
+      const rate = this._checkClientRateLimit(
+        'findAccounts',
+        config.loginRateLimit || 5,
+        config.loginRateLimitWindowMs || 60000
+      );
+      if (!rate.allowed) {
+        return createResponse(false, null, `查询过于频繁，请 ${rate.waitSec} 秒后再试`, 429);
+      }
+
       const filter = {
         student_type: identityData.student_type,
         branch: identityData.branch,
@@ -101,23 +147,22 @@ export const authService = {
 
   async register(password, nickname = '', additionalData = {}) {
     try {
+      // 保险策略：UID 必须由服务端 RPC 唯一生成；禁止前端随机降级，避免撞号
       let uid;
       try {
         const { data: uidData, error: uidError } = await supabase.rpc('generate_unique_uid');
         if (uidError) {
           console.error('[UID生成] RPC错误:', uidError.message, '| code:', uidError.code, '| details:', uidError.details);
-          uid = this._generateUidFallback();
-          console.warn('[UID生成] 使用前端降级方案生成UID:', uid);
-        } else if (!uidData) {
-          console.error('[UID生成] RPC返回空数据');
-          uid = this._generateUidFallback();
-        } else {
-          uid = uidData;
+          return createResponse(false, null, 'UID 生成失败，请稍后重试', 503);
         }
+        if (!uidData) {
+          console.error('[UID生成] RPC返回空数据');
+          return createResponse(false, null, 'UID 生成失败，请稍后重试', 503);
+        }
+        uid = uidData;
       } catch (e) {
         console.error('[UID生成] 异常:', e.message);
-        uid = this._generateUidFallback();
-        console.warn('[UID生成] 使用前端降级方案生成UID:', uid);
+        return createResponse(false, null, 'UID 生成失败，请稍后重试', 503);
       }
 
       const email = this._generateVirtualEmail(uid);
@@ -162,14 +207,6 @@ export const authService = {
     } catch (error) {
       return createResponse(false, null, error.message, 500);
     }
-  },
-
-  _generateUidFallback() {
-    let uid;
-    do {
-      uid = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
-    } while (uid === '00000000');
-    return uid;
   },
 
   async checkDuplicateIdentity(identityData) {
@@ -481,8 +518,22 @@ export const authService = {
 
   async updateUserMetadata(metadata) {
     try {
+      // 仅允许公开资料字段同步到 Auth metadata，禁止改写 uid/role 等敏感键
+      const allowedKeys = ['nickname', 'bio', 'signature', 'avatar'];
+      const safeMetadata = {};
+      if (metadata && typeof metadata === 'object') {
+        for (const key of allowedKeys) {
+          if (Object.prototype.hasOwnProperty.call(metadata, key)) {
+            safeMetadata[key] = metadata[key];
+          }
+        }
+      }
+      if (Object.keys(safeMetadata).length === 0) {
+        return createResponse(false, null, '没有可更新的资料字段', 400);
+      }
+
       const { data, error } = await supabase.auth.updateUser({
-        data: metadata
+        data: safeMetadata
       });
       if (error) {
         return createResponse(false, null, error.message, error.status || 400);

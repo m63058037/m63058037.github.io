@@ -190,8 +190,10 @@ export function validateUsername(username) {
  */
 export function getThumbnailUrl(url, width = 200) {
   if (!url) return '';
-  if (url.includes('supabase.co')) {
-    return url.replace('/storage/v1/object/public/', `/storage/v1/object/public/`) + `?width=${width}`;
+  if (url.includes('supabase.co') && url.includes('/storage/v1/object/public/')) {
+    const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    const sep = transformed.includes('?') ? '&' : '?';
+    return `${transformed}${sep}width=${encodeURIComponent(width)}`;
   }
   return url;
 }

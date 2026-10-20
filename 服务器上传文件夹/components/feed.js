@@ -285,13 +285,27 @@ export class FeedComponent {
     `;
 
     postCard.querySelectorAll('.post-image').forEach(img => {
-      img.addEventListener('click', () => {
+      img.addEventListener('click', (e) => {
+        e.stopPropagation();
         const url = img.getAttribute('data-url') || img.src;
         this.openLightbox(url);
       });
     });
 
-    // 阻止作者名称链接点击冒泡
+    // 整卡进入详情；作者链接 / 图片预览单独处理
+    postCard.addEventListener('click', (e) => {
+      if (e.target.closest('a, button, .post-image, .post-image-wrapper')) return;
+      window.location.href = `post-detail.html?id=${encodeURIComponent(post.id)}`;
+    });
+    postCard.setAttribute('role', 'link');
+    postCard.tabIndex = 0;
+    postCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.location.href = `post-detail.html?id=${encodeURIComponent(post.id)}`;
+      }
+    });
+
     const authorNameLink = postCard.querySelector('.author-name');
     if (authorNameLink) {
       authorNameLink.addEventListener('click', (e) => {

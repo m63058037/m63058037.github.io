@@ -64,9 +64,9 @@ class LottieIconUtils {
     
     // 应用Material Design 3颜色
     const primaryColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--md-sys-color-primary').trim() || '#D8B66A';
+      .getPropertyValue('--md-sys-color-primary').trim() || '#4F8A4F';
     const onSurfaceColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--md-sys-color-on-surface').trim() || '#403A34';
+      .getPropertyValue('--md-sys-color-on-surface').trim() || '#191D17';
     
     // 根据图标类型设置默认颜色
     let defaultColor = onSurfaceColor;
@@ -192,7 +192,7 @@ class LottieIconUtils {
     container.style.minHeight = '24px';
     
     const primaryColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--md-sys-color-primary').trim() || '#D8B66A';
+      .getPropertyValue('--md-sys-color-primary').trim() || '#4F8A4F';
     
     container.innerHTML = this.getFallbackSVG(iconName, primaryColor);
     return container;

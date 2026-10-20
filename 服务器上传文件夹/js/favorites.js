@@ -95,7 +95,7 @@ class FavoritesPage {
     const safeExcerpt = escapeHtml(post.excerpt || post.content?.substring(0, 200) || '暂无内容');
     const safePostId = escapeHtml(post.id);
     const safeTags = post.tags && post.tags.length > 0
-      ? post.tags.slice(0, 3).map(tag => `<span class="post-tag">${escapeHtml(tag)}</span>`)
+      ? post.tags.slice(0, 3).map(tag => `<span class="post-tag">${escapeHtml(tag)}</span>`).join('')
       : '';
 
     postCard.innerHTML = `
@@ -146,6 +146,19 @@ class FavoritesPage {
         </div>
       </div>
     `;
+
+    postCard.addEventListener('click', (e) => {
+      if (e.target.closest('a, button')) return;
+      window.location.href = `post-detail.html?id=${encodeURIComponent(post.id)}`;
+    });
+    postCard.setAttribute('role', 'link');
+    postCard.tabIndex = 0;
+    postCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.location.href = `post-detail.html?id=${encodeURIComponent(post.id)}`;
+      }
+    });
 
     return postCard;
   }

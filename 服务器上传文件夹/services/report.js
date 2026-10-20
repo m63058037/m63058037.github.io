@@ -141,13 +141,28 @@ export const reportService = {
 
   async getReportStatus(reportId) {
     try {
+      const userResponse = await authService.getCurrentUser();
+      if (!userResponse.success) {
+        return createResponse(false, null, userResponse.message, userResponse.statusCode);
+      }
+
       const response = await apiService.findOne('reports', { id: reportId });
 
       if (!response.success) {
         return createResponse(false, null, response.message, response.statusCode);
       }
 
-      return createResponse(true, response.data, '', 200);
+      const report = response.data;
+      if (!report) {
+        return createResponse(false, null, '举报不存在', 404);
+      }
+
+      // 仅允许查看自己提交的举报（管理端走 admin RPC，不经此方法）
+      if (report.reporter_id !== userResponse.data.id) {
+        return createResponse(false, null, '无权查看此举报', 403);
+      }
+
+      return createResponse(true, report, '', 200);
     } catch (error) {
       console.error('ReportService getReportStatus error:', error);
       return createResponse(false, null, error.message, 500);

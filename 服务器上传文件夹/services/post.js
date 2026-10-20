@@ -249,8 +249,9 @@ export const postService = {
    * @param {Array<string>} branches - 校区范围数组（校区名称或 'all'）
    */
   async createPost(title, content, tags = [], branches = []) {
+    let userResponse = null;
     try {
-      const userResponse = await authService.getCurrentUser();
+      userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
         return createResponse(false, null, userResponse.message, userResponse.statusCode);
       }
@@ -310,6 +311,14 @@ export const postService = {
 
       if (!branchResponse.success) {
         loggerService.logError(new Error(branchResponse.message), { operation: 'set_post_branches', postId: post.id });
+        // 校区绑定失败则软删除刚创建的帖子，避免“发帖成功但列表不可见”
+        try {
+          await apiService.update('posts', { is_deleted: true }, { id: post.id });
+        } catch (cleanupError) {
+          loggerService.logError(cleanupError, { operation: 'create_post_cleanup', postId: post.id });
+        }
+        await loggerService.logPost(userId, post.id, 'create', 'failed', { title, reason: 'set_post_branches' });
+        return createResponse(false, null, '校区设置失败，请稍后重试', branchResponse.statusCode || 500);
       }
 
       await loggerService.logPost(userId, post.id, 'create', 'success', { title });
@@ -317,7 +326,7 @@ export const postService = {
       return createResponse(true, post, '帖子发布成功', 201);
     } catch (error) {
       loggerService.logError(error, { operation: 'create_post', table: 'posts' });
-      const userId = userResponse?.data?.id;
+      const userId = userResponse?.data?.id || null;
       await loggerService.logPost(userId, null, 'create', 'failed', { title, error: error.message });
       return createResponse(false, null, error.message, 500);
     }
@@ -380,6 +389,8 @@ export const postService = {
 
         if (!branchResponse.success) {
           loggerService.logError(new Error(branchResponse.message), { operation: 'set_post_branches', postId });
+          // 正文已更新成功，校区失败单独提示，便于用户重试校区设置，不回滚正文
+          return createResponse(false, response.data[0], '帖子内容已保存，但校区设置失败，请重试保存', branchResponse.statusCode || 500);
         }
       }
 

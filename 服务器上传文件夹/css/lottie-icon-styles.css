@@ -21,7 +21,9 @@
   min-height: 24px;
   position: relative;
   transform: none;
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized),
+              opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+              color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   cursor: pointer;
   flex-shrink: 0;
   z-index: 1;
@@ -71,11 +73,20 @@
 
 
 .lottie-icon:hover {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .lottie-icon:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lottie-icon,
+  .lottie-icon:hover,
+  .lottie-icon:active {
+    transition: none;
+    transform: none;
+  }
 }
 
 /* Lottie图标尺寸变体 */

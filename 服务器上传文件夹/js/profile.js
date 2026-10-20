@@ -234,8 +234,8 @@ class ProfilePage {
         updates.avatar = this.avatarUploadedUrl;
       }
 
-      // 敏感词前端预检（昵称/签名）：命中则弹全屏警告，保留输入，不提交
-      const blockHit = [updates.nickname, updates.signature]
+      // 敏感词前端预检（昵称/签名/简介）：命中则弹全屏警告，保留输入，不提交
+      const blockHit = [updates.nickname, updates.signature, updates.bio]
         .filter(Boolean)
         .map(t => sensitiveWordService.check(t))
         .find(h => h.level > 0);

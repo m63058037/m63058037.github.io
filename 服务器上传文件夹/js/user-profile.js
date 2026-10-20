@@ -198,9 +198,10 @@ class UserProfilePage {
   }
 
   generateAvatarColor(seed) {
+    // Soft green MD3 tonal avatars
     const colors = [
-      '#5B8FF9', '#5AD8A6', '#5D7092', '#F6BD16', '#E8684A',
-      '#6DC8EC', '#9270CA', '#FF9D4D', '#269A99', '#FF99C3'
+      '#4F8A4F', '#3F7340', '#5A6B58', '#6B8F6B', '#2F5A30',
+      '#7A9E72', '#5B6E48', '#458045', '#6A8568', '#3D6B45'
     ];
     let hash = 0;
     for (let i = 0; i < seed.length; i++) {

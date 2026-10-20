@@ -281,6 +281,24 @@ class SearchPage {
       </div>
     `;
 
+    postCard.addEventListener('click', (e) => {
+      if (e.target.closest('a, button, .post-image, .post-image-wrapper')) return;
+      window.location.href = `post-detail.html?id=${encodeURIComponent(post.id)}`;
+    });
+    postCard.setAttribute('role', 'link');
+    postCard.tabIndex = 0;
+    postCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.location.href = `post-detail.html?id=${encodeURIComponent(post.id)}`;
+      }
+    });
+
+    const authorNameLink = postCard.querySelector('.author-name');
+    if (authorNameLink) {
+      authorNameLink.addEventListener('click', (e) => e.stopPropagation());
+    }
+
     return postCard;
   }
 
@@ -373,11 +391,9 @@ class SearchPage {
         loadingMoreEl.style.display = 'flex';
         loadingMoreEl.style.justifyContent = 'center';
         loadingMoreEl.style.padding = '20px';
-        loadingMoreEl.style.color = '#999';
+        loadingMoreEl.style.color = 'var(--md-sys-color-on-surface-variant)';
         loadingMoreEl.innerHTML = `
-          <svg class="loading-spinner" viewBox="25 25 50 50" style="width:24px;height:24px;margin-right:8px;">
-            <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="100"/>
-          </svg>
+          <span class="material-symbols-outlined loading-spinner" aria-hidden="true" style="font-size:24px;margin-right:8px;">progress_activity</span>
           <span>加载中...</span>
         `;
         this.sentinel.parentNode.insertBefore(loadingMoreEl, this.sentinel);
@@ -396,7 +412,7 @@ class SearchPage {
       noMoreEl.className = 'no-more-posts';
       noMoreEl.style.textAlign = 'center';
       noMoreEl.style.padding = '20px';
-      noMoreEl.style.color = '#999';
+      noMoreEl.style.color = 'var(--md-sys-color-on-surface-variant)';
       noMoreEl.style.fontSize = '14px';
       noMoreEl.textContent = '没有更多了';
       this.sentinel.parentNode.insertBefore(noMoreEl, this.sentinel);

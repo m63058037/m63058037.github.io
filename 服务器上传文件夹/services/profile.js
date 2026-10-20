@@ -82,16 +82,32 @@ export const profileService = {
         return { success: false, error: '未登录' };
       }
 
-      if (fields.nickname) {
-        const block = await sensitiveWordService.verify(fields.nickname);
+      // 仅允许公开资料字段，防止误传 role/uid 等敏感列
+      const allowedKeys = ['nickname', 'bio', 'signature', 'avatar'];
+      const safeFields = {};
+      for (const key of allowedKeys) {
+        if (Object.prototype.hasOwnProperty.call(fields, key)) {
+          safeFields[key] = fields[key];
+        }
+      }
+      if (Object.keys(safeFields).length === 0) {
+        return { success: false, error: '没有可更新的资料字段' };
+      }
+
+      if (safeFields.nickname) {
+        const block = await sensitiveWordService.verify(safeFields.nickname);
         if (block) return { success: false, error: block.message };
       }
-      if (fields.signature) {
-        const block = await sensitiveWordService.verify(fields.signature);
+      if (safeFields.signature) {
+        const block = await sensitiveWordService.verify(safeFields.signature);
+        if (block) return { success: false, error: block.message };
+      }
+      if (safeFields.bio) {
+        const block = await sensitiveWordService.verify(safeFields.bio);
         if (block) return { success: false, error: block.message };
       }
 
-      const response = await api.update('profiles', fields, { id: userId });
+      const response = await api.update('profiles', safeFields, { id: userId });
 
       if (!response.success) {
         return { success: false, error: response.message || '资料更新失败' };

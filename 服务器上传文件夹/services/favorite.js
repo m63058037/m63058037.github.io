@@ -11,7 +11,13 @@ function createResponse(success, data = null, message = '', statusCode = 200) {
 }
 
 export const favoriteService = {
+  _inflight: new Map(),
+
   async toggleFavorite(postId) {
+    if (this._inflight.get(postId)) {
+      return createResponse(false, null, '操作进行中，请稍候', 429);
+    }
+    this._inflight.set(postId, true);
     try {
       const userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
@@ -45,6 +51,10 @@ export const favoriteService = {
         });
 
         if (!insertResponse.success) {
+          if (/duplicate|unique|23505/i.test(insertResponse.message || '')) {
+            await apiService.rpc('update_post_favorites_count', { p_post_id: postId });
+            return createResponse(true, { saved: true }, '收藏成功', 200);
+          }
           return createResponse(false, null, insertResponse.message, insertResponse.statusCode);
         }
 
@@ -54,6 +64,8 @@ export const favoriteService = {
     } catch (error) {
       console.error('FavoriteService toggleFavorite error:', error);
       return createResponse(false, null, error.message, 500);
+    } finally {
+      this._inflight.delete(postId);
     }
   },
 

@@ -11,7 +11,13 @@ function createResponse(success, data = null, message = '', statusCode = 200) {
 }
 
 export const likeService = {
+  _inflight: new Map(),
+
   async toggleLike(postId) {
+    if (this._inflight.get(postId)) {
+      return createResponse(false, null, '操作进行中，请稍候', 429);
+    }
+    this._inflight.set(postId, true);
     try {
       const userResponse = await authService.getCurrentUser();
       if (!userResponse.success) {
@@ -45,6 +51,11 @@ export const likeService = {
         });
 
         if (!insertResponse.success) {
+          // 唯一约束冲突视为已点赞（并发连点），不暴露底层错误
+          if (/duplicate|unique|23505/i.test(insertResponse.message || '')) {
+            await apiService.rpc('update_post_likes_count', { p_post_id: postId });
+            return createResponse(true, { liked: true }, '点赞成功', 200);
+          }
           return createResponse(false, null, insertResponse.message, insertResponse.statusCode);
         }
 
@@ -54,6 +65,8 @@ export const likeService = {
     } catch (error) {
       console.error('LikeService toggleLike error:', error);
       return createResponse(false, null, error.message, 500);
+    } finally {
+      this._inflight.delete(postId);
     }
   },
 
